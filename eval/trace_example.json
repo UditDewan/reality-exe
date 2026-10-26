@@ -1,0 +1,153 @@
+[
+ {
+  "t": 0.033,
+  "state": "calibrating",
+  "scene_version": 0,
+  "event": "scene_ready",
+  "obstacles": 1,
+  "target": [
+   199,
+   383
+  ]
+ },
+ {
+  "t": 0.033,
+  "state": "placing",
+  "scene_version": 0,
+  "event": "plan",
+  "why": "Initial plan from the measured layout.",
+  "guide": [
+   340.0,
+   230.0,
+   -15.0
+  ],
+  "miss_nominal": 2.3,
+  "miss_worst": 9.3,
+  "p_hit": 1.0,
+  "candidates": 1823,
+  "latency_ms": 450.4,
+  "params": {
+   "mu_roll": 0.01,
+   "damp": 0.1,
+   "rest": 0.5,
+   "mu_wall": 0.15
+  }
+ },
+ {
+  "t": 0.2,
+  "state": "ready",
+  "scene_version": 0,
+  "event": "placement_verified",
+  "error_mm": 4.2,
+  "error_deg": 1.4,
+  "predicted_miss": 7.4
+ },
+ {
+  "t": 0.667,
+  "state": "trial",
+  "scene_version": 0,
+  "event": "release_detected"
+ },
+ {
+  "t": 1.867,
+  "state": "trial",
+  "scene_version": 0,
+  "event": "model_updated",
+  "before": {
+   "mu_roll": 0.01,
+   "damp": 0.1,
+   "rest": 0.5,
+   "mu_wall": 0.15
+  },
+  "after": {
+   "mu_roll": 0.0,
+   "damp": 0.9375,
+   "rest": 0.1917,
+   "mu_wall": 0.25
+  },
+  "prior_err_mm": 10.7,
+  "fit_err_mm": 2.0,
+  "plausible": 67
+ },
+ {
+  "t": 1.867,
+  "state": "trial",
+  "scene_version": 0,
+  "event": "trial_result",
+  "n": 1,
+  "hit": false,
+  "miss_mm": 190.2,
+  "pred_miss_mm": 7.4,
+  "traj_err_mm": 5.6
+ },
+ {
+  "t": 4.633,
+  "state": "placing",
+  "scene_version": 0,
+  "event": "plan",
+  "why": "Observed path was 6 mm off the prediction; re-fitted physics: speed damping 0.10 -> 0.94, bounce 0.50 -> 0.19.",
+  "guide": [
+   295.0,
+   230.0,
+   -64.0
+  ],
+  "miss_nominal": 1.9,
+  "miss_worst": 4.2,
+  "p_hit": 1.0,
+  "candidates": 2534,
+  "latency_ms": 524.1,
+  "params": {
+   "mu_roll": 0.0,
+   "damp": 0.9375,
+   "rest": 0.1917,
+   "mu_wall": 0.25
+  }
+ },
+ {
+  "t": 5.033,
+  "state": "ready",
+  "scene_version": 0,
+  "event": "placement_verified",
+  "error_mm": 2.1,
+  "error_deg": 1.8,
+  "predicted_miss": 3.3
+ },
+ {
+  "t": 5.533,
+  "state": "trial",
+  "scene_version": 0,
+  "event": "release_detected"
+ },
+ {
+  "t": 6.933,
+  "state": "trial",
+  "scene_version": 0,
+  "event": "model_updated",
+  "before": {
+   "mu_roll": 0.0,
+   "damp": 0.9375,
+   "rest": 0.1917,
+   "mu_wall": 0.25
+  },
+  "after": {
+   "mu_roll": 0.0,
+   "damp": 0.75,
+   "rest": 0.1917,
+   "mu_wall": 0.25
+  },
+  "prior_err_mm": 3.9,
+  "fit_err_mm": 2.2,
+  "plausible": 30
+ },
+ {
+  "t": 6.933,
+  "state": "trial",
+  "scene_version": 0,
+  "event": "trial_result",
+  "n": 2,
+  "hit": true,
+  "miss_mm": 2.5,
+  "pred_miss_mm": 3.3,
+  "traj_err_mm": 2.4
+ }
+]

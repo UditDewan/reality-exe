@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REALITY.EXE</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --bg:#0b0f14; --panel:#121922; --line:#223041; --text:#e6edf3; --dim:#8b9bb0; --accent:#38e1ff; --ok:#3fdc7a; --bad:#ff5c7a; --warn:#ffc04d; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 system-ui, -apple-system, Segoe UI, sans-serif; }
+  header { display:flex; flex-wrap:wrap; gap:12px; align-items:center; padding:12px 16px; border-bottom:1px solid var(--line); }
+  h1 { font:700 18px ui-monospace, Consolas, monospace; margin:0; letter-spacing:.05em; }
+  h1 span { color:var(--accent); }
+  .tag { color:var(--dim); flex:1; min-width:200px; }
+  button { background:#1b2633; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:8px 12px; font:inherit; cursor:pointer; }
+  button:hover { border-color:var(--accent); } button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  button.on { background:#0f3b47; border-color:var(--accent); }
+  main { display:grid; grid-template-columns:minmax(0,1fr) 360px; gap:12px; padding:12px 16px; }
+  .views { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px; min-width:0; }
+  .card h2 { font:600 12px ui-monospace, Consolas, monospace; text-transform:uppercase; letter-spacing:.08em; color:var(--dim); margin:0 0 8px; }
+  #cam, #twin { width:100%; aspect-ratio:4/3; display:block; border-radius:8px; background:#000; }
+  #instruction { font-size:20px; font-weight:600; min-height:56px; }
+  #why { color:var(--warn); min-height:20px; }
+  #blocked { display:none; background:#3a1520; border:1px solid var(--bad); color:#ffd0d8; padding:8px; border-radius:8px; margin-top:8px; }
+  .chip { display:inline-block; font:600 12px ui-monospace, Consolas, monospace; padding:2px 8px; border-radius:99px; background:#0f3b47; color:var(--accent); }
+  table { width:100%; border-collapse:collapse; font:12px ui-monospace, Consolas, monospace; }
+  td, th { text-align:left; padding:3px 4px; border-bottom:1px solid var(--line); }
+  th { color:var(--dim); font-weight:500; }
+  .hit { color:var(--ok); } .miss { color:var(--bad); }
+  #controls { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  #events { font:12px ui-monospace, Consolas, monospace; max-height:260px; overflow:auto; margin:0; padding:0; list-style:none; }
+  #events li { padding:4px 0; border-bottom:1px solid var(--line); }
+  #events b { color:var(--accent); } #events .v { color:var(--warn); }
+  .side { display:flex; flex-direction:column; gap:12px; }
+  .legend { color:var(--dim); font-size:12px; margin-top:6px; }
+  .legend i { display:inline-block; width:14px; height:3px; vertical-align:middle; margin:0 4px 0 10px; }
+  #note { color:var(--dim); min-height:18px; }
+  @media (max-width: 1100px) { main { grid-template-columns:1fr; } }
+  @media (max-width: 720px) { .views { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>REALITY<span>.EXE</span></h1>
+  <div class="tag">A debugger for the physical world: OpenCV 5 measures, the planner rehearses, you move the pieces.</div>
+  <button id="btnSyn" class="on">Synthetic tabletop</button>
+  <button id="btnCam">Use my camera</button>
+  <span id="conn" class="chip">connecting</span>
+</header>
+<main>
+  <section>
+    <div class="views">
+      <div class="card"><h2>Camera + OpenCV overlay</h2><img id="cam" alt="Annotated camera view of the board"></div>
+      <div class="card"><h2>Digital twin (drag to orbit)</h2><canvas id="twin" aria-label="3D digital twin of the board"></canvas></div>
+    </div>
+    <div class="legend">
+      <i style="background:#00ffff"></i>prediction <i style="background:#78dcff;opacity:.6"></i>same plan, other plausible physics
+      <i style="background:#5ac8c8;opacity:.5"></i>runner-up plans <i style="background:#ff3b3b"></i>observed ball <i style="background:#2b8cff"></i>where to put the guide
+    </div>
+    <div id="controls" class="card" aria-label="Synthetic tabletop controls (your hands)">
+      <button data-cmd="place">Place guide as instructed</button>
+      <button data-cmd="release">Release ball</button>
+      <button data-cmd="reset_ball">Ball back to gate</button>
+      <button data-cmd="move_obstacle">Move an obstacle</button>
+      <button data-cmd="occlude" id="occ">Block the camera</button>
+      <button data-cmd="auto" id="auto">Auto-follow instructions</button>
+      <button data-cmd="new_layout">New layout</button>
+      <button data-cmd="restart">Restart session</button>
+      <div id="note" aria-live="polite"></div>
+    </div>
+    <div class="card" style="margin-top:12px"><h2>Decision trace (every OpenCV result that changed what happens next)</h2><ul id="events"></ul></div>
+  </section>
+  <aside class="side">
+    <div class="card"><h2>Current instruction <span id="state" class="chip">-</span></h2>
+      <div id="instruction" aria-live="polite">Connecting...</div>
+      <div id="why"></div>
+      <div id="blocked" role="alert"></div>
+    </div>
+    <div class="card"><h2>Plan</h2><table id="plan"></table></div>
+    <div class="card"><h2>Physics the agent believes</h2><table id="params"></table></div>
+    <div class="card"><h2>Trials</h2><table id="trials"><tr><th>#</th><th>result</th><th>miss</th><th>predicted</th><th>traj err</th></tr></table></div>
+  </aside>
+</main>
+<video id="video" playsinline muted style="display:none"></video>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const $ = (id) => document.getElementById(id);
+const fmt = (v, d = 1) => (v == null || Number.isNaN(v)) ? '-' : Number(v).toFixed(d);
+
+// ---------- digital twin ----------
+const S = 0.01, canvas = $('twin');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+const scene3 = new THREE.Scene(); scene3.background = new THREE.Color(0x0b0f14);
+const cam3 = new THREE.PerspectiveCamera(42, 4 / 3, 0.1, 100); cam3.position.set(0, 5.2, 6.6);
+const orbit = new OrbitControls(cam3, canvas); orbit.target.set(0, 0, 0.3); orbit.update();
+scene3.add(new THREE.HemisphereLight(0xffffff, 0x223344, 1.1));
+const sun = new THREE.DirectionalLight(0xffffff, 1.2); sun.position.set(2, 6, 3); scene3.add(sun);
+const board = new THREE.Group(); scene3.add(board);
+let W = 600, H = 450;
+const P = (x, y, z = 0) => new THREE.Vector3((x - W / 2) * S, z * S, (y - H / 2) * S);
+const mat = (c, o = 1) => new THREE.MeshStandardMaterial({ color: c, transparent: o < 1, opacity: o, roughness: .6 });
+const plane = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat(0xd8dde2)); board.add(plane);
+const ball = new THREE.Mesh(new THREE.SphereGeometry(20 * S, 32, 16), mat(0xff7a00)); board.add(ball);
+const ghostBall = new THREE.Mesh(new THREE.SphereGeometry(20 * S, 24, 12), mat(0x00ffff, .35)); board.add(ghostBall);
+const guide = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat(0x1450c8)); board.add(guide);
+const goal = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat(0x2b8cff, .35)); board.add(goal);
+const target = new THREE.Mesh(new THREE.RingGeometry(16 * S, 24 * S, 40), new THREE.MeshBasicMaterial({ color: 0x3fdc7a, side: THREE.DoubleSide }));
+target.rotation.x = -Math.PI / 2; board.add(target);
+[ball, ghostBall, guide, goal, target].forEach((m) => { m.visible = false; });
+const obstacles = [], lines = {};
+function setBoard(w, h, tilt) {
+  W = w; H = h; plane.scale.set(w * S, 4 * S, h * S); plane.position.set(0, -2 * S, 0);
+  board.rotation.x = tilt * Math.PI / 180;
+}
+function place(mesh, o, len, wid, ht) {
+  mesh.visible = !!o; if (!o) return;
+  mesh.scale.set(len * S, ht * S, wid * S); mesh.position.copy(P(o[0], o[1], ht / 2)); mesh.rotation.y = -o[2] * Math.PI / 180;
+}
+function setLine(key, paths, color, opacity) {
+  (lines[key] || []).forEach((l) => { board.remove(l); l.geometry.dispose(); });
+  lines[key] = (paths || []).filter((p) => p && p.length > 1).map((p) => {
+    const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(p.map((q) => P(q[0], q[1], 20))),
+      new THREE.LineBasicMaterial({ color, transparent: opacity < 1, opacity }));
+    board.add(l); return l;
+  });
+}
+let rehearse = null, rehearseT = 0;
+function twin(st) {
+  const [bw, bh, tilt] = st.board; setBoard(bw, bh, tilt);
+  const sc = st.scene, ov = st.overlay || {};
+  ball.visible = !!sc.ball; if (sc.ball) ball.position.copy(P(sc.ball.x, sc.ball.y, 20));
+  place(guide, sc.guide && [sc.guide.x, sc.guide.y, sc.guide.angle], 180, 15, 30);
+  place(goal, ov.goal, 180, 15, 30);
+  target.visible = !!sc.target; if (sc.target) target.position.copy(P(sc.target.x, sc.target.y, 1));
+  while (obstacles.length < sc.obstacles.length) { const m = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat(0xc040b0)); board.add(m); obstacles.push(m); }
+  obstacles.forEach((m, i) => { const o = sc.obstacles[i]; place(m, o && [o.x, o.y, o.angle], o ? o.length : 1, o ? o.width : 1, 40); });
+  setLine('alt', ov.alternatives, 0x5ac8c8, .35); setLine('ghost', ov.ghosts, 0x78dcff, .55);
+  setLine('pred', ov.pred_path ? [ov.pred_path] : [], 0x00ffff, 1); setLine('obs', ov.observed ? [ov.observed] : [], 0xff3b3b, 1);
+  rehearse = ['placing', 'ready'].includes(st.state) ? ov.pred_path : null;
+}
+function resize() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (canvas.width !== w || canvas.height !== h) { renderer.setSize(w, h, false); cam3.aspect = w / h; cam3.updateProjectionMatrix(); }
+}
+(function loop() {
+  resize();
+  ghostBall.visible = !!rehearse;
+  if (rehearse) { rehearseT = (rehearseT + 1) % (rehearse.length + 30); const q = rehearse[Math.min(rehearseT, rehearse.length - 1)]; ghostBall.position.copy(P(q[0], q[1], 20)); }
+  renderer.render(scene3, cam3); requestAnimationFrame(loop);
+})();
+
+// ---------- panels ----------
+function panels(st) {
+  $('state').textContent = st.state;
+  $('instruction').textContent = st.instruction;
+  $('why').textContent = st.why ? 'Why: ' + st.why : '';
+  $('blocked').style.display = st.blocked ? 'block' : 'none';
+  $('blocked').textContent = st.blocked ? `Camera view unclear (${st.blocked}). Holding the plan; clear the view to continue.` : '';
+  const p = st.plan || {};
+  $('plan').innerHTML = p.guide ? [
+    ['guide pose', `(${fmt(p.guide[0], 0)}, ${fmt(p.guide[1], 0)}) mm, ${fmt(p.guide[2], 1)}°`],
+    ['predicted miss', `${fmt(p.miss_nominal)} mm (worst ${fmt(p.miss_worst)} mm)`],
+    ['hit across plausible physics', `${fmt(100 * p.p_hit, 0)}%`],
+    ['rollouts / latency', `${p.candidates} / ${fmt(p.latency_ms, 0)} ms`],
+    ['made for layout', `v${p.scene_version} (now v${st.scene.version})`],
+  ].map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('') : '<tr><td>No plan yet</td></tr>';
+  const r = st.ranges || {};
+  $('params').innerHTML = '<tr><th>param</th><th>estimate</th><th>plausible range</th></tr>' + Object.entries(st.params).map(([k, v]) =>
+    `<tr><td>${k}</td><td>${fmt(v, 3)}</td><td>${r[k] ? fmt(r[k][0], 3) + ' – ' + fmt(r[k][1], 3) : 'prior ±20%'}</td></tr>`).join('');
+  $('trials').innerHTML = '<tr><th>#</th><th>result</th><th>miss</th><th>predicted</th><th>traj err</th></tr>' + st.trials.map((t) =>
+    `<tr><td>${t.n}</td><td class="${t.hit ? 'hit' : 'miss'}">${t.hit ? 'HIT' : 'miss'}</td><td>${fmt(t.miss_mm, 0)} mm</td><td>${fmt(t.pred_miss_mm, 0)} mm</td><td>${fmt(t.traj_err_mm)} mm</td></tr>`).join('');
+  $('events').innerHTML = st.events.slice().reverse().map((e) => {
+    const { t, state, scene_version, event, ...rest } = e;
+    return `<li><span class="v">v${scene_version}</span> t=${fmt(t, 2)} <b>${event}</b> ${JSON.stringify(rest).slice(0, 220).replace(/</g, '&lt;')}</li>`;
+  }).join('');
+}
+
+// ---------- transport ----------
+let ws = null, mode = 'synthetic', stream = null;
+const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+function connect(m) {
+  if (ws) ws.close();
+  mode = m; $('btnSyn').classList.toggle('on', m === 'synthetic'); $('btnCam').classList.toggle('on', m === 'camera');
+  document.querySelectorAll('#controls button').forEach((b) => { b.hidden = m === 'camera' && b.dataset.cmd !== 'restart'; });
+  ws = new WebSocket(`${proto}://${location.host}/ws?mode=${m}`);
+  ws.onopen = () => { $('conn').textContent = 'connected'; if (m === 'camera') sendFrame(); };
+  ws.onclose = (e) => { $('conn').textContent = e.reason || 'disconnected'; };
+  ws.onmessage = (ev) => {
+    const msg = JSON.parse(ev.data);
+    if (msg.type === 'hello') { $('conn').textContent = msg.session; return; }
+    if (msg.type === 'note') { $('note').textContent = msg.text; return; }
+    $('cam').src = msg.img; panels(msg.status); twin(msg.status);
+    if (mode === 'synthetic') { $('auto').classList.toggle('on', msg.auto); $('occ').classList.toggle('on', msg.occluded); $('note').textContent = ''; }
+    else sendFrame();
+  };
+}
+const grab = document.createElement('canvas'); grab.width = 960; grab.height = 720;
+function sendFrame() {
+  const v = $('video'); if (!stream || ws.readyState !== 1) return;
+  grab.getContext('2d').drawImage(v, 0, 0, 960, 720);
+  grab.toBlob(async (b) => { if (ws.readyState === 1) ws.send(new Blob([new Float64Array([performance.now() / 1000]), await b.arrayBuffer()])); }, 'image/jpeg', 0.8);
+}
+$('btnSyn').onclick = () => connect('synthetic');
+$('btnCam').onclick = async () => {
+  try {
+    stream = stream || await navigator.mediaDevices.getUserMedia({ video: { width: 960, height: 720, facingMode: 'environment' } });
+    $('video').srcObject = stream; await $('video').play(); connect('camera');
+  } catch (e) { $('instruction').textContent = 'Camera unavailable: ' + e.message + ' (needs HTTPS or localhost).'; }
+};
+document.querySelectorAll('#controls button').forEach((b) => { b.onclick = () => ws && ws.readyState === 1 && ws.send(JSON.stringify({ cmd: b.dataset.cmd })); });
+connect('synthetic');
+</script>
+</body>
+</html>

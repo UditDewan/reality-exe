@@ -1,0 +1,109 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  REALITY.EXE - OpenCV 5 perception + Newton/reduced-model planning on EC2 (Docker), trial evidence in S3,
+  structured decision logs in CloudWatch, HTTPS + WebSockets via CloudFront (needed for the browser camera).
+
+Parameters:
+  RepoUrl:
+    Type: String
+    Description: Public git URL of this repository (cloned and built on the instance).
+  InstanceType:
+    Type: String
+    Default: t3.large
+    Description: CPU is enough. For Graviton use e.g. t4g.large together with the arm64 AmiId below.
+  AmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+  AllowedCidr:
+    Type: String
+    Default: 0.0.0.0/0
+    Description: Who may reach the instance's HTTP origin directly. Narrow this if you only use the CloudFront URL.
+
+Resources:
+  TraceBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration: { BlockPublicAcls: true, BlockPublicPolicy: true, IgnorePublicAcls: true, RestrictPublicBuckets: true }
+      BucketEncryption:
+        ServerSideEncryptionConfiguration: [{ ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 } }]
+      LifecycleConfiguration:
+        Rules: [{ Id: expire-evidence, Status: Enabled, ExpirationInDays: 30 }]  # camera frames are not kept forever
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: { LogGroupName: !Sub "/reality-exe/${AWS::StackName}", RetentionInDays: 14 }
+
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement: [{ Effect: Allow, Principal: { Service: ec2.amazonaws.com }, Action: sts:AssumeRole }]
+      ManagedPolicyArns: [arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore]  # shell via Session Manager, no SSH port
+      Policies:
+        - PolicyName: least-privilege
+          PolicyDocument:
+            Statement:
+              - { Effect: Allow, Action: s3:PutObject, Resource: !Sub "${TraceBucket.Arn}/*" }
+              - { Effect: Allow, Action: [logs:CreateLogStream, logs:PutLogEvents], Resource: !GetAtt LogGroup.Arn }  # this Arn already ends in :*
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties: { Roles: [!Ref InstanceRole] }
+
+  WebSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: REALITY.EXE HTTP origin
+      SecurityGroupIngress: [{ IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIp: !Ref AllowedCidr }]
+
+  Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AmiId
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref InstanceProfile
+      SecurityGroupIds: [!GetAtt WebSecurityGroup.GroupId]
+      MetadataOptions: { HttpTokens: required, HttpPutResponseHopLimit: 2 }  # IMDSv2; hop 2 so the container gets role creds
+      BlockDeviceMappings: [{ DeviceName: /dev/xvda, Ebs: { VolumeSize: 20, VolumeType: gp3, Encrypted: true } }]
+      Tags: [{ Key: Name, Value: reality-exe }]
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -euxo pipefail
+          dnf install -y docker git
+          systemctl enable --now docker
+          git clone --depth 1 ${RepoUrl} /opt/reality
+          cd /opt/reality
+          docker build -t reality-exe .
+          docker run -d --name reality --restart unless-stopped -p 80:8000 \
+            -e TRACE_BUCKET=${TraceBucket} -e AWS_DEFAULT_REGION=${AWS::Region} \
+            --log-driver awslogs --log-opt awslogs-region=${AWS::Region} --log-opt awslogs-group=${LogGroup} \
+            reality-exe
+
+  Cdn:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: REALITY.EXE (HTTPS + WebSocket front for the EC2 origin)
+        Origins:
+          - Id: ec2
+            DomainName: !GetAtt Instance.PublicDnsName
+            CustomOriginConfig: { OriginProtocolPolicy: http-only, HTTPPort: 80 }
+        DefaultCacheBehavior:
+          TargetOriginId: ec2
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS, PUT, PATCH, POST, DELETE]
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # Managed-CachingDisabled
+          OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3  # Managed-AllViewer (keeps WebSocket upgrade headers)
+
+Outputs:
+  AppUrl:
+    Description: Judge-facing HTTPS endpoint (browser camera works here). Allow ~10 min for build + CloudFront.
+    Value: !Sub "https://${Cdn.DomainName}"
+  DirectUrl:
+    Value: !Sub "http://${Instance.PublicDnsName}"
+  TraceBucket:
+    Value: !Ref TraceBucket
+  LogGroup:
+    Value: !Ref LogGroup

@@ -1,0 +1,6 @@
+.venv
+.git
+eval
+traces
+__pycache__
+*.mp4
