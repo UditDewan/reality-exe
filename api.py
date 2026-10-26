@@ -198,19 +198,20 @@ async def synthetic_loop(sock, sid, ctrl, seed):
                     world = World(seed=seed, target=L["target"], obstacles=L["obstacles"], guide=L["guide"], truth=L["truth"])
                     if c == "restart":
                         ctrl = sessions[sid] = Controller(CFG, session=sid)
-            world.tick()
-            img = world.render()
-            await asyncio.to_thread(ctrl.step, img, world.t)
+            for _ in range(2):  # perceive every 30 Hz frame, stream every other one (15 fps is plenty for a browser)
+                world.tick()
+                img = world.render()
+                await asyncio.to_thread(ctrl.step, img, world.t)
             if auto and world.traj is None and not world.occluded and ctrl.state in ("placing", "ready", "reset"):
                 if ctrl.state == "ready":
                     await asyncio.to_thread(world.act, ctrl.state, None)
-                elif int(world.t * 30) % 12 == 0:
+                elif int(world.t * 15) % 6 == 0:
                     world.act(ctrl.state, (ctrl.plan or {}).get("guide"))
             await sock.send_text(packet(ctrl, img, {"auto": auto, "occluded": world.occluded, "seed": seed}))
             if len(ctrl.trials) != trials:
                 trials = len(ctrl.trials)
                 await asyncio.to_thread(save_trace, sid, ctrl, ctrl.annotate(img))
-            await asyncio.sleep(max(0.0, 1 / 30 - (time.perf_counter() - t0)))
+            await asyncio.sleep(max(0.0, 2 / 30 - (time.perf_counter() - t0)))
     finally:
         task.cancel()
         sessions[sid] = ctrl

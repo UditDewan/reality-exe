@@ -129,7 +129,7 @@ function setLine(key, paths, color, opacity) {
     board.add(l); return l;
   });
 }
-let rehearse = null, rehearseT = 0;
+let rehearse = null, rehearseT = 0, lastKey = '';
 function twin(st) {
   const [bw, bh, tilt] = st.board; setBoard(bw, bh, tilt);
   const sc = st.scene, ov = st.overlay || {};
@@ -139,8 +139,12 @@ function twin(st) {
   target.visible = !!sc.target; if (sc.target) target.position.copy(P(sc.target.x, sc.target.y, 1));
   while (obstacles.length < sc.obstacles.length) { const m = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat(0xc040b0)); board.add(m); obstacles.push(m); }
   obstacles.forEach((m, i) => { const o = sc.obstacles[i]; place(m, o && [o.x, o.y, o.angle], o ? o.length : 1, o ? o.width : 1, 40); });
-  setLine('alt', ov.alternatives, 0x5ac8c8, .35); setLine('ghost', ov.ghosts, 0x78dcff, .55);
-  setLine('pred', ov.pred_path ? [ov.pred_path] : [], 0x00ffff, 1); setLine('obs', ov.observed ? [ov.observed] : [], 0xff3b3b, 1);
+  const key = JSON.stringify([st.plan && st.plan.guide, ov.pred_path && ov.pred_path[ov.pred_path.length - 1], (ov.ghosts || []).length, (ov.observed || []).length]);
+  if (key !== lastKey) {  // rebuild path geometry only when the paths actually change
+    lastKey = key;
+    setLine('alt', ov.alternatives, 0x5ac8c8, .35); setLine('ghost', ov.ghosts, 0x78dcff, .55);
+    setLine('pred', ov.pred_path ? [ov.pred_path] : [], 0x00ffff, 1); setLine('obs', ov.observed ? [ov.observed] : [], 0xff3b3b, 1);
+  }
   rehearse = ['placing', 'ready'].includes(st.state) ? ov.pred_path : null;
 }
 function resize() {
