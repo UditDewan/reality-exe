@@ -90,7 +90,8 @@ aws cloudformation deploy --stack-name reality-exe --template-file deploy/cloudf
 aws cloudformation describe-stacks --stack-name reality-exe --query "Stacks[0].Outputs" --output table
 ```
 
-`AppUrl` is the judge-facing HTTPS endpoint (allow ~10 minutes for the Docker build and CloudFront). The stack
+`AppUrl` is the judge-facing endpoint: HTTPS through CloudFront, or plain HTTP with `UseCloudFront=false` (below).
+Allow ~10 minutes for the Docker build and CloudFront. The stack
 creates: EC2 (`m7i-flex.large`, which Free-plan accounts can also launch; Docker, IMDSv2 only, no SSH, Session Manager access), an encrypted private S3 bucket
 with 30-day expiry for trial traces/evidence frames, a CloudWatch log group (14-day retention) receiving one
 JSON line per agent decision, a least-privilege instance role (`s3:PutObject` to that bucket and log writes
