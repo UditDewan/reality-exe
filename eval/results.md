@@ -12,7 +12,7 @@ Layouts: 10. Each layout has its own hidden surface physics. The agent sees only
 | Trajectory error, trial 2 (mm) | 3.2 | 9.8 |
 | Trajectory error, trial 3 (mm) | 1.6 | 10.4 |
 
-Planning latency: median 334 ms, p95 505 ms over 51 plans.
+Planning latency: median 320 ms, p95 441 ms over 51 plans.
 
 ## Recovery after an obstacle moves mid-instruction
 
@@ -20,7 +20,7 @@ Detected and invalidated: 10/10; replanned on the new layout version: 10/10; hum
 
 ## Occluded camera
 
-Clear view requested: True; resumed after view restored: True; model update skipped for the trial with a tracking gap: True; unobserved outcome reported as unknown (not as a miss): False.
+Clear view requested: True; resumed after view restored: True; model update skipped for the trial with a tracking gap: True; outcome of the occluded roll: hit (observed) (an unobserved miss is reported as unknown, see test_core.py).
 
 ## Repeatability (first technical checkpoint)
 
@@ -33,4 +33,4 @@ Clear view requested: True; resumed after view restored: True; model update skip
 | ball | 0.29 | 0.50 | 4592 |
 | guide_mm | 0.15 | 0.32 | 4978 |
 | guide_deg | 0.05 | 0.13 | 4978 |
-| ms | 11.00 | 20.87 | 4978 |
+| ms | 12.29 | 24.47 | 4978 |

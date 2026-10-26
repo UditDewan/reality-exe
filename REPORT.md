@@ -112,7 +112,7 @@ that changes the next tool call (the plan) and the next human action:
 
 ## 4. OpenCV 5 implementation (`vision.py`)
 
-Every frame goes through this pipeline, about 11 ms per 960×720 frame on one laptop core:
+Every frame goes through this pipeline, about 10–12 ms per 960×720 frame on one laptop core:
 
 1. **Marker detection:** `cv.aruco.ArucoDetector` (DICT_4X4_50) with sub-pixel corner refinement. Ids 0–3
    sit at known board positions, and id 4 is the user-placed target.
@@ -166,7 +166,7 @@ upgrade path, and the code already builds one world per candidate.
    `0.5·mean miss + 0.5·worst miss + 15 mm if it touches an obstacle + small effort cost` for moving the guide
    far from where it already is.
 
-That is about 2,000 rollouts per plan, with a median latency of about 0.33 s on CPU.
+That is about 2,000 rollouts per plan, with a median latency of about 0.3 s on CPU.
 
 **Identification (`identify.py`).** The parameters are fitted jointly to **all** trials so far. Each trial
 is simulated with the guide pose and obstacles as they actually were. The error combines path-shape distance
@@ -222,11 +222,11 @@ Results from `python evaluate.py`, 10 layouts. Full output is in `eval/results.m
 
 | Check | Result |
 |---|---|
-| Planning latency (laptop CPU, ~2,000 rollouts per plan) | median 334 ms, p95 505 ms over 51 plans |
+| Planning latency (laptop CPU, ~2,000 rollouts per plan) | median 320 ms, p95 441 ms over 51 plans (medians of 253–334 ms across three runs) |
 | Obstacle moved while the human is being instructed | detected and plan invalidated 10/10; replanned on the new layout version 10/10; human actions taken on a stale plan 0; target later reached 9/10 |
 | Camera blocked after placement, then mid-roll | clear view requested and nothing issued while blocked; resumed when restored; the mid-roll trial (467 ms tracking gap) was not learned from; the ball was then seen hitting, so the hit stands (an unobserved miss would be reported as *unknown*, covered by `test_core.py`) |
 | Repeatability (first technical checkpoint: 8 releases of one setup, 1 mm gate jitter) | exit point σ 3.8 mm (x), 0.9 mm (y); distance-to-target σ 3.7 mm, well under the 22 mm target radius |
-| OpenCV accuracy vs. renderer ground truth (mean / p95) | ball 0.29 / 0.50 mm; guide 0.15 / 0.32 mm and 0.05 / 0.13°; 11 ms per frame |
+| OpenCV accuracy vs. renderer ground truth (mean / p95) | ball 0.29 / 0.50 mm; guide 0.15 / 0.32 mm and 0.05 / 0.13°; 10–12 ms per frame |
 
 **What the numbers say.**
 - **Learning is what moves the hit rate.** On the 4 layouts where the prior physics happened to be

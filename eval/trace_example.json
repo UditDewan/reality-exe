@@ -25,7 +25,7 @@
   "miss_worst": 9.3,
   "p_hit": 1.0,
   "candidates": 1823,
-  "latency_ms": 450.4,
+  "latency_ms": 290.6,
   "params": {
    "mu_roll": 0.01,
    "damp": 0.1,
@@ -95,7 +95,7 @@
   "miss_worst": 4.2,
   "p_hit": 1.0,
   "candidates": 2534,
-  "latency_ms": 524.1,
+  "latency_ms": 310.0,
   "params": {
    "mu_roll": 0.0,
    "damp": 0.9375,
