@@ -9,6 +9,10 @@ plan before you act on it.
 
 The camera is the experimental scientist; you are its hands.
 
+- **Live demo on AWS: http://ec2-98-93-53-0.compute-1.amazonaws.com**. It opens on the synthetic tabletop, so no hardware is needed. Press *Auto-follow
+  instructions* to watch the whole loop, or drive it yourself with *Place guide as instructed* → *Release ball*.
+  *Move an obstacle* and *Block the camera* show the human-control cases. It is plain HTTP until AWS enables
+  CloudFront for this new account, so *Use my camera* (which needs HTTPS) works only on a local run for now.
 - Technical report: [REPORT.md](REPORT.md)
 - Evaluation results: [eval/results.md](eval/results.md), first-milestone clip: [eval/first_milestone.mp4](eval/first_milestone.mp4), example decision trace: [eval/trace_example.json](eval/trace_example.json)
 - Competition path: **Agentic Vision with OpenCV 5**: OpenCV measurements change the next plan, instruction and model update.
@@ -87,10 +91,15 @@ aws cloudformation describe-stacks --stack-name reality-exe --query "Stacks[0].O
 ```
 
 `AppUrl` is the judge-facing HTTPS endpoint (allow ~10 minutes for the Docker build and CloudFront). The stack
-creates: EC2 (`t3.large`, Docker, IMDSv2 only, no SSH, Session Manager access), an encrypted private S3 bucket
+creates: EC2 (`m7i-flex.large`, which Free-plan accounts can also launch; Docker, IMDSv2 only, no SSH, Session Manager access), an encrypted private S3 bucket
 with 30-day expiry for trial traces/evidence frames, a CloudWatch log group (14-day retention) receiving one
 JSON line per agent decision, a least-privilege instance role (`s3:PutObject` to that bucket and log writes
 only), and a CloudFront distribution for HTTPS/WebSockets. Cost is roughly $0.10/hour while running.
+
+New AWS accounts cannot create CloudFront distributions until AWS Support verifies them (*"Your account must be
+verified before you can add new CloudFront resources"*). Until then, add `UseCloudFront=false` to
+`--parameter-overrides`: `AppUrl` is then plain HTTP straight from EC2. The synthetic demo works; the browser camera
+needs HTTPS. Once verified, run the same deploy with `UseCloudFront=true` to add the distribution in place.
 
 Tear down: `aws s3 rm s3://<TraceBucket> --recursive && aws cloudformation delete-stack --stack-name reality-exe`.
 

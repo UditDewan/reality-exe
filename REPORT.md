@@ -187,11 +187,12 @@ the structured decision records, so they cannot hallucinate.
 
 One CloudFormation stack, deployable from AWS CloudShell with one command (see README):
 
-- **Amazon EC2** (`t3.large`, Amazon Linux 2023) builds and runs the pinned Docker image (Ubuntu 24.04 by
+- **Amazon EC2** (`m7i-flex.large`, 2 vCPU / 8 GiB, Amazon Linux 2023) builds and runs the pinned Docker image (Ubuntu 24.04 by
   digest, OpenCV 5.0.0, Newton 1.7.0, Warp 1.18.0). The build pre-compiles Newton's CPU kernels and runs
   `test_core.py`, so a broken image fails at build time, not in front of a judge.
 - **Amazon CloudFront** gives the HTTPS + WebSocket front door. HTTPS is required for browser camera access.
-  Caching is disabled and the managed AllViewer policy forwards the upgrade headers.
+  Caching is disabled and the managed AllViewer policy forwards the upgrade headers. It is a template switch
+  (`UseCloudFront`), because AWS must verify a new account before it can create distributions.
 - **Amazon S3** stores trial evidence: the full decision trace per session plus one annotated frame per
   trial. The bucket blocks public access, uses SSE-S3 encryption and expires objects after 30 days.
 - **Amazon CloudWatch Logs** gets one structured JSON line per agent decision (session, layout version,
@@ -201,6 +202,13 @@ One CloudFormation stack, deployable from AWS CloudShell with one command (see R
   allowlist on the WebSocket, and a cap on concurrent sessions.
 - **Reproducibility:** `requirements.txt` is a full lock, the base image is pinned by digest, and the
   benchmark is seeded (`python evaluate.py`).
+
+**Live deployment** (2026-10-26, us-east-1, `m7i-flex.large`): http://ec2-98-93-53-0.compute-1.amazonaws.com. The account is new, and AWS has not yet
+enabled CloudFront for it, so the stack runs with `UseCloudFront=false` (HTTP straight from EC2) until it does.
+On the instance, the image built and passed its self-test in about two minutes. From a home connection, `/health`
+took 80 ms (median of 10 requests). A full synthetic session (a 197 mm miss, re-fitted physics, then a hit
+within 2.5 mm) streamed its first annotated frame after 0.66 s and then 6.3 frames/s. Its decision trace and
+both evidence frames landed in S3, and its 12 decision lines in CloudWatch Logs.
 
 ## 7. Evaluation
 
@@ -261,8 +269,8 @@ Results from `python evaluate.py`, 10 layouts. Full output is in `eval/results.m
 
 **Important: these are synthetic results.** We have not yet run repeated physical trials. The physical
 pipeline (browser camera, then the same agent) is implemented and its perception is unit-tested on rendered
-frames only. Physical-world hit rates, trajectory errors and latency over a real network are not measured
-and should not be read into the table above.
+frames only. Physical-world hit rates and trajectory errors are not measured and should not be read into
+the table above. Network latency of the deployed service is measured only for the synthetic session (section 6).
 
 ## 8. Limitations
 
@@ -306,5 +314,5 @@ pip install -r requirements.txt && python test_core.py && python evaluate.py && 
 Requirements checklist: OpenCV 5 image/video analysis ✓ (`vision.py`) · meaningful AWS component ✓ (all
 perception, planning and simulation on EC2; S3, CloudWatch, CloudFront) · report ✓ · repository ✓ · pinned
 dependencies and instructions ✓ (README) · architecture and agent workflow diagrams ✓ (above) · web endpoint
-✓ (CloudFormation output `AppUrl`) · evaluation with failure cases ✓ (section 7) · trace showing OpenCV output
+✓ (`AppUrl`, live at http://ec2-98-93-53-0.compute-1.amazonaws.com) · evaluation with failure cases ✓ (section 7) · trace showing OpenCV output
 changing a later decision ✓ (section 3).
