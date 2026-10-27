@@ -5,202 +5,400 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>REALITY.EXE</title>
 <link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-  :root { --bg:#0b0f14; --panel:#121922; --line:#223041; --text:#e6edf3; --dim:#8b9bb0; --accent:#38e1ff; --ok:#3fdc7a; --bad:#ff5c7a; --warn:#ffc04d; }
+  /* Look and feel follows Linear's app UI: near-black canvas, two quiet panels, hairline dividers, Inter at 13px,
+     muted secondary text, one indigo accent, state shown as a small ring. Scene colours match the OpenCV overlay. */
+  :root {
+    --bg:#08090a; --panel:#0f1011; --raised:#17181b; --hover:#1e1f23; --line:#1d1e22; --line-2:#2a2c31;
+    --text:#f7f8f8; --text-2:#c8ccd4; --muted:#8a8f98; --faint:#5f636b;
+    --accent:#5e6ad2; --accent-hi:#828bf0; --ok:#4cb782; --bad:#eb5757; --warn:#f2c94c; --orange:#f2994a;
+    --mono:"JetBrains Mono", ui-monospace, Consolas, monospace;
+  }
   * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 system-ui, -apple-system, Segoe UI, sans-serif; }
-  header { display:flex; flex-wrap:wrap; gap:12px; align-items:center; padding:12px 16px; border-bottom:1px solid var(--line); }
-  h1 { font:700 18px ui-monospace, Consolas, monospace; margin:0; letter-spacing:.05em; }
-  h1 span { color:var(--accent); }
-  .tag { color:var(--dim); flex:1; min-width:200px; }
-  button { background:#1b2633; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:8px 12px; font:inherit; cursor:pointer; }
-  button:hover { border-color:var(--accent); } button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-  button.on { background:#0f3b47; border-color:var(--accent); }
-  main { display:grid; grid-template-columns:minmax(0,1fr) 360px; gap:12px; padding:12px 16px; }
-  .views { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px; min-width:0; }
-  .card h2 { font:600 12px ui-monospace, Consolas, monospace; text-transform:uppercase; letter-spacing:.08em; color:var(--dim); margin:0 0 8px; }
-  #cam, #twin { width:100%; aspect-ratio:4/3; display:block; border-radius:8px; background:#000; }
-  #instruction { font-size:20px; font-weight:600; min-height:56px; }
-  #why { color:var(--warn); min-height:20px; }
-  #blocked { display:none; background:#3a1520; border:1px solid var(--bad); color:#ffd0d8; padding:8px; border-radius:8px; margin-top:8px; }
-  .chip { display:inline-block; font:600 12px ui-monospace, Consolas, monospace; padding:2px 8px; border-radius:99px; background:#0f3b47; color:var(--accent); }
-  table { width:100%; border-collapse:collapse; font:12px ui-monospace, Consolas, monospace; }
-  td, th { text-align:left; padding:3px 4px; border-bottom:1px solid var(--line); }
-  th { color:var(--dim); font-weight:500; }
-  .hit { color:var(--ok); } .miss { color:var(--bad); }
-  #controls { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
-  #events { font:12px ui-monospace, Consolas, monospace; max-height:260px; overflow:auto; margin:0; padding:0; list-style:none; }
-  #events li { padding:4px 0; border-bottom:1px solid var(--line); }
-  #events b { color:var(--accent); } #events .v { color:var(--warn); }
-  .side { display:flex; flex-direction:column; gap:12px; }
-  .legend { color:var(--dim); font-size:12px; margin-top:6px; }
-  .legend i { display:inline-block; width:14px; height:3px; vertical-align:middle; margin:0 4px 0 10px; }
-  #note { color:var(--dim); min-height:18px; }
-  @media (max-width: 1100px) { main { grid-template-columns:1fr; } }
-  @media (max-width: 720px) { .views { grid-template-columns:1fr; } }
+  body { margin:0; background:var(--bg); color:var(--text); font:13px/1.5 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+         -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums; }
+  .app { height:100vh; display:grid; grid-template-rows:auto minmax(0,1fr); grid-template-columns:minmax(0,1fr); }
+  button { font:inherit; font-weight:500; color:var(--text-2); background:var(--raised); border:1px solid var(--line-2); border-radius:6px;
+           height:30px; padding:0 12px; cursor:pointer; white-space:nowrap; transition:background .12s, border-color .12s, color .12s; }
+  button:hover { background:var(--hover); color:var(--text); }
+  button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button.primary:hover { background:var(--accent-hi); border-color:var(--accent-hi); }
+  button.ghost:not(.primary) { background:transparent; }
+
+  header { display:flex; align-items:center; gap:10px; padding:10px 12px 10px 16px; }
+  .brand { display:flex; align-items:center; gap:9px; font-weight:600; font-size:14px; letter-spacing:.02em; white-space:nowrap; }
+  .brand span { color:var(--muted); }
+  .tagline { flex:1; min-width:0; margin-left:4px; padding-left:14px; border-left:1px solid var(--line-2); color:var(--muted);
+             white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .seg { display:flex; gap:2px; padding:2px; border:1px solid var(--line); border-radius:8px; background:var(--panel); }
+  .seg button { height:26px; border-color:transparent; background:transparent; color:var(--muted); }
+  .seg button.on { background:var(--hover); border-color:var(--line-2); color:var(--text); }
+  .pill { display:inline-flex; align-items:center; gap:7px; height:30px; padding:0 11px; border:1px solid var(--line); border-radius:99px;
+          color:var(--muted); font:500 11.5px var(--mono); white-space:nowrap; }
+  .pill::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--faint); }
+  .pill.live::before { background:var(--ok); box-shadow:0 0 0 3px rgba(76,183,130,.18); }
+
+  main { min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:8px; padding:0 8px 8px; }
+  .panel { min-height:0; background:var(--panel); border:1px solid var(--line); border-radius:12px; }
+  .stage { display:flex; flex-direction:column; overflow:auto; }
+  .head { flex:none; display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; min-height:46px; padding:8px 14px; border-bottom:1px solid var(--line); }
+  .head h1 { margin:0; font-size:14px; font-weight:600; }
+  .tag { padding:1px 7px; border:1px solid var(--line-2); border-radius:5px; color:var(--muted); font:500 11.5px var(--mono); }
+  .legend { margin-left:auto; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:2px 14px; color:var(--muted); font-size:12px; }
+  .legend i { display:inline-block; width:12px; height:3px; margin-right:6px; border-radius:2px; vertical-align:middle; }
+  main > * { min-width:0; }
+  .views { flex:none; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px; padding:12px 12px 0; }
+  .view { position:relative; margin:0; overflow:hidden; border:1px solid var(--line); border-radius:8px; background:#0c0d0f; }
+  #cam, #twin { display:block; width:100%; aspect-ratio:4/3; }
+  #cam { object-fit:cover; }
+  #twin { cursor:grab; } #twin:active { cursor:grabbing; }
+  .view figcaption { position:absolute; left:8px; top:8px; padding:2px 8px; border:1px solid rgba(255,255,255,.08); border-radius:6px;
+                     background:rgba(8,9,10,.82); color:var(--text-2); font-size:11.5px; pointer-events:none; }
+  .toolbar { flex:none; display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:12px; }
+  .toolbar .sep { width:1px; height:18px; margin:0 4px; background:var(--line-2); }
+  .toolbar.cam .sep { display:none; }
+  .toolbar button.on { color:var(--text); background:rgba(235,87,87,.12); border-color:var(--bad); }
+  .toolbar button.on::before { content:""; display:inline-block; width:6px; height:6px; margin-right:7px; border-radius:50%; background:var(--bad); vertical-align:1px; }
+  .toolbar .cta { margin-left:auto; color:var(--text); background:rgba(94,106,210,.14); border-color:rgba(130,139,240,.55); }
+  .toolbar .cta::before { content:""; display:inline-block; margin-right:8px; border-left:7px solid var(--accent-hi); border-top:4.5px solid transparent;
+                          border-bottom:4.5px solid transparent; vertical-align:-1px; }
+  .toolbar .cta.on { background:rgba(76,183,130,.12); border-color:var(--ok); }
+  .toolbar .cta.on::before { width:7px; height:7px; border:0; border-radius:50%; background:var(--ok); box-shadow:0 0 0 3px rgba(76,183,130,.22); vertical-align:0; }
+  #note { color:var(--muted); font-size:12px; }
+  .sub { flex:none; display:flex; align-items:baseline; gap:10px; padding:12px 16px 4px; border-top:1px solid var(--line); }
+  .sub h2 { margin:0; font-size:13px; font-weight:600; }
+  .sub span { color:var(--faint); font-size:12px; }
+  .feed { flex:1; min-height:160px; overflow:auto; margin:0; padding:6px 16px 12px; list-style:none; }
+  .feed li { position:relative; display:grid; grid-template-columns:18px minmax(0,1fr) auto; gap:12px; padding:5px 0 9px; }
+  .feed li::before { content:""; position:absolute; left:8.5px; top:25px; bottom:-4px; width:1px; background:var(--line-2); }
+  .feed li:last-child::before { display:none; }
+  .node { width:18px; height:18px; margin-top:1px; display:grid; place-items:center; border:1px solid var(--line-2); border-radius:50%; background:var(--raised); }
+  .node::after { content:""; width:6px; height:6px; border-radius:50%; background:var(--c); }
+  .ev-t { font-weight:500; }
+  .ev-d { color:var(--muted); }
+  .ev-why { margin-top:4px; padding-left:10px; border-left:2px solid var(--accent); color:var(--text-2); }
+  .ev-m { padding-top:2px; color:var(--faint); font:11.5px var(--mono); white-space:nowrap; }
+
+  .side { overflow:auto; }
+  .block { padding:14px 16px; border-top:1px solid var(--line); }
+  .block:first-child { border-top:0; }
+  .label { display:flex; align-items:center; gap:8px; margin-bottom:8px; color:var(--muted); font-size:12px; font-weight:500; }
+  .label .r { margin-left:auto; color:var(--faint); font-weight:400; }
+  .label .stale { color:var(--warn); }
+  .chip { display:inline-flex; align-items:center; gap:6px; height:22px; padding:0 9px 0 6px; border:1px solid var(--line-2); border-radius:99px;
+          color:var(--text-2); font-size:12px; font-weight:500; text-transform:capitalize; }
+  .chip::before { content:""; width:11px; height:11px; padding:1.5px; border:1.5px solid var(--sc, var(--faint)); border-radius:50%;
+                  background:conic-gradient(var(--sc, var(--faint)) var(--sp, 0%), transparent 0) content-box; }
+  #state[data-s=placing] { --sc:var(--warn); --sp:35%; } #state[data-s=ready] { --sc:var(--accent-hi); --sp:60%; }
+  #state[data-s=trial] { --sc:var(--accent-hi); --sp:85%; } #state[data-s=reset] { --sc:var(--orange); --sp:85%; }
+  #state[data-s=success] { --sc:var(--ok); --sp:100%; }
+  #instruction { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.01em; }
+  #why:not(:empty) { margin-top:12px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:var(--raised); color:var(--text-2); font-size:12.5px; }
+  #why b { margin-right:6px; color:var(--accent-hi); font-weight:600; }
+  #blocked { display:none; margin-top:10px; padding:10px 12px; border:1px solid rgba(235,87,87,.35); border-radius:8px; background:rgba(235,87,87,.1); color:#ffb8b8; }
+  .steps { display:grid; grid-template-columns:repeat(5,1fr); gap:4px; margin:0 0 12px; padding:0; list-style:none; }
+  .steps li { height:26px; display:grid; place-items:center; border:1px solid var(--line); border-radius:6px; color:var(--faint); font-size:11.5px; font-weight:500; }
+  .steps li.done { color:var(--muted); background:var(--raised); border-color:transparent; }
+  .steps li.now { color:#fff; background:rgba(94,106,210,.2); border-color:var(--accent); }
+  .steps li.now.learn { background:rgba(242,153,74,.14); border-color:var(--orange); }
+  .steps li.now.ok { background:rgba(76,183,130,.16); border-color:var(--ok); }
+  .props { display:grid; grid-template-columns:auto minmax(0,1fr); gap:8px 12px; margin:0; }
+  .props dt { color:var(--muted); }
+  .props dd { margin:0; text-align:right; }
+  .dim { color:var(--faint); } .stale { color:var(--warn); }
+  .meter { height:4px; margin-top:6px; overflow:hidden; border-radius:2px; background:var(--line-2); }
+  .meter i { display:block; height:100%; background:var(--ok); }
+  .param { display:grid; grid-template-columns:118px minmax(0,1fr) 44px; align-items:center; gap:10px; }
+  .param + .param { margin-top:10px; }
+  .param .name { color:var(--text-2); }
+  .param .val { text-align:right; font:500 12px var(--mono); }
+  .range { position:relative; height:6px; border-radius:3px; background:var(--raised); }
+  .range .band { position:absolute; top:0; bottom:0; min-width:3px; border-radius:3px; background:rgba(130,139,240,.45); transition:left .6s, width .6s; }
+  .range .est { position:absolute; top:-3px; width:2px; height:12px; margin-left:-1px; border-radius:1px; background:#fff; transition:left .6s; }
+  .tbl { width:100%; border-collapse:collapse; font-size:12.5px; }
+  .tbl th { padding:0 0 6px; color:var(--faint); font-weight:500; text-align:right; }
+  .tbl td { padding:5px 0; border-top:1px solid var(--line); text-align:right; }
+  .tbl th:nth-child(-n+2), .tbl td:nth-child(-n+2) { text-align:left; }
+  .res { font-weight:500; color:var(--bad); }
+  .res::before { content:""; display:inline-block; width:7px; height:7px; margin-right:6px; border:1.5px solid currentColor; border-radius:50%; vertical-align:0; }
+  .res.hit { color:var(--ok); } .res.hit::before { background:currentColor; }
+  .empty { color:var(--faint); }
+
+  @media (max-width:1100px) { .app { height:auto; } main { grid-template-columns:1fr; } .stage { overflow:visible; } .feed { max-height:360px; } }
+  @media (max-width:720px) { header { flex-wrap:wrap; } .tagline { display:none; } .views { grid-template-columns:1fr; } .toolbar .cta { margin-left:0; } }
 </style>
 </head>
 <body>
+<div class="app">
 <header>
-  <h1>REALITY<span>.EXE</span></h1>
-  <div class="tag">A debugger for the physical world: OpenCV 5 measures, the planner rehearses, you move the pieces.</div>
-  <button id="btnSyn" class="on">Synthetic tabletop</button>
-  <button id="btnCam">Use my camera</button>
-  <span id="conn" class="chip">connecting</span>
+  <div class="brand">
+    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect width="20" height="20" rx="6" fill="#5e6ad2"/>
+      <path d="M4.5 15.5C6.5 9.5 9.5 6.3 14 5.7" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-dasharray=".01 3.1" opacity=".8"/>
+      <circle cx="14.6" cy="5.6" r="2.3" fill="#fff"/></svg>
+    <div>REALITY<span>.EXE</span></div>
+  </div>
+  <div class="tagline">A debugger for the physical world</div>
+  <button data-cmd="new_layout" class="ghost" title="Generate a new board layout">New layout</button>
+  <button data-cmd="restart" class="ghost" title="Start the session over">Restart</button>
+  <div class="seg" role="group" aria-label="Input"><button id="btnSyn" class="on">Synthetic tabletop</button><button id="btnCam">Use my camera</button></div>
+  <span id="conn" class="pill">connecting</span>
 </header>
 <main>
-  <section>
+  <section class="panel stage">
+    <div class="head">
+      <h1>Make the ball reach the target</h1><span id="layout" class="tag">layout v0</span>
+      <div class="legend">
+        <span><i style="background:#00ffff"></i>prediction</span>
+        <span><i style="background:#78dcff;opacity:.6"></i>other plausible physics</span>
+        <span><i style="background:#5ac8c8;opacity:.5"></i>runner-up plans</span>
+        <span><i style="background:#ff3b3b"></i>observed</span>
+        <span><i style="background:#2b8cff"></i>guide goes here</span>
+      </div>
+    </div>
     <div class="views">
-      <div class="card"><h2>Camera + OpenCV overlay</h2><img id="cam" alt="Annotated camera view of the board"></div>
-      <div class="card"><h2>Digital twin (drag to orbit)</h2><canvas id="twin" aria-label="3D digital twin of the board"></canvas></div>
+      <figure class="view"><img id="cam" alt="Annotated camera view of the board"><figcaption>Camera · OpenCV overlay</figcaption></figure>
+      <figure class="view"><canvas id="twin" aria-label="3D digital twin of the board"></canvas><figcaption>Digital twin · drag to orbit</figcaption></figure>
     </div>
-    <div class="legend">
-      <i style="background:#00ffff"></i>prediction <i style="background:#78dcff;opacity:.6"></i>same plan, other plausible physics
-      <i style="background:#5ac8c8;opacity:.5"></i>runner-up plans <i style="background:#ff3b3b"></i>observed ball <i style="background:#2b8cff"></i>where to put the guide
+    <div id="controls" class="toolbar" aria-label="Synthetic tabletop controls (your hands)">
+      <button data-cmd="place" title="Move the guide to the instructed pose">Place guide</button>
+      <button data-cmd="release" title="Let the ball go from the gate">Release ball</button>
+      <button data-cmd="reset_ball" title="Put the ball back at the gate">Reset ball</button>
+      <span class="sep"></span>
+      <button data-cmd="move_obstacle" title="Move an obstacle while the agent is instructing">Move obstacle</button>
+      <button data-cmd="occlude" id="occ" title="Cover the camera">Block camera</button>
+      <span id="note" aria-live="polite"></span>
+      <button data-cmd="auto" id="auto" class="cta" title="Let a scripted human follow every instruction">Auto-follow instructions</button>
     </div>
-    <div id="controls" class="card" aria-label="Synthetic tabletop controls (your hands)">
-      <button data-cmd="place">Place guide as instructed</button>
-      <button data-cmd="release">Release ball</button>
-      <button data-cmd="reset_ball">Ball back to gate</button>
-      <button data-cmd="move_obstacle">Move an obstacle</button>
-      <button data-cmd="occlude" id="occ">Block the camera</button>
-      <button data-cmd="auto" id="auto">Auto-follow instructions</button>
-      <button data-cmd="new_layout">New layout</button>
-      <button data-cmd="restart">Restart session</button>
-      <div id="note" aria-live="polite"></div>
-    </div>
-    <div class="card" style="margin-top:12px"><h2>Decision trace (every OpenCV result that changed what happens next)</h2><ul id="events"></ul></div>
+    <div class="sub"><h2>Activity</h2><span>Decision trace: every OpenCV result that changed what happens next</span></div>
+    <ol id="events" class="feed"></ol>
   </section>
-  <aside class="side">
-    <div class="card"><h2>Current instruction <span id="state" class="chip">-</span></h2>
+  <aside class="panel side">
+    <div class="block">
+      <div class="label">Current instruction <span id="state" class="chip">-</span><span id="attempt" class="r"></span></div>
+      <ol id="steps" class="steps" aria-label="Agent loop"><li>Measure</li><li>Place</li><li>Release</li><li>Watch</li><li>Learn</li></ol>
       <div id="instruction" aria-live="polite">Connecting...</div>
       <div id="why"></div>
       <div id="blocked" role="alert"></div>
     </div>
-    <div class="card"><h2>Plan</h2><table id="plan"></table></div>
-    <div class="card"><h2>Physics the agent believes</h2><table id="params"></table></div>
-    <div class="card"><h2>Trials</h2><table id="trials"><tr><th>#</th><th>result</th><th>miss</th><th>predicted</th><th>traj err</th></tr></table></div>
+    <div class="block"><div class="label">Plan <span id="madefor" class="r"></span></div><dl id="plan" class="props"></dl></div>
+    <div class="block"><div class="label">Physics the agent believes <span class="r">bar = plausible range</span></div><div id="params"></div></div>
+    <div class="block"><div class="label">Trials</div><div id="trials"></div></div>
   </aside>
 </main>
+</div>
 <video id="video" playsinline muted style="display:none"></video>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Line2 } from 'three/addons/lines/Line2.js';
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 
 const $ = (id) => document.getElementById(id);
 const fmt = (v, d = 1) => (v == null || Number.isNaN(v)) ? '-' : Number(v).toFixed(d);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 // ---------- digital twin ----------
 const S = 0.01, canvas = $('twin');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-const scene3 = new THREE.Scene(); scene3.background = new THREE.Color(0x0b0f14);
-const cam3 = new THREE.PerspectiveCamera(42, 4 / 3, 0.1, 100); cam3.position.set(0, 5.2, 6.6);
-const orbit = new OrbitControls(cam3, canvas); orbit.target.set(0, 0, 0.3); orbit.update();
-scene3.add(new THREE.HemisphereLight(0xffffff, 0x223344, 1.1));
-const sun = new THREE.DirectionalLight(0xffffff, 1.2); sun.position.set(2, 6, 3); scene3.add(sun);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene3 = new THREE.Scene(); scene3.background = new THREE.Color(0x0c0d0f); scene3.fog = new THREE.Fog(0x0c0d0f, 10, 22);
+const cam3 = new THREE.PerspectiveCamera(42, 4 / 3, 0.1, 100); cam3.position.set(0, 4.8, 6.1);
+const orbit = new OrbitControls(cam3, canvas); orbit.target.set(0, 0, 0.3); orbit.enableDamping = true; orbit.update();
+scene3.add(new THREE.HemisphereLight(0xdfe6ff, 0x15171b, 1.0));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(3, 8, 4); scene3.add(sun);
+const floor = new THREE.GridHelper(60, 60, 0x1c1e23, 0x15171a); floor.position.y = -1.2; scene3.add(floor);
 const board = new THREE.Group(); scene3.add(board);
-let W = 600, H = 450;
+let W = 600, H = 450, boardKey = '';
 const P = (x, y, z = 0) => new THREE.Vector3((x - W / 2) * S, z * S, (y - H / 2) * S);
-const mat = (c, o = 1) => new THREE.MeshStandardMaterial({ color: c, transparent: o < 1, opacity: o, roughness: .6 });
-const plane = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat(0xd8dde2)); board.add(plane);
-const ball = new THREE.Mesh(new THREE.SphereGeometry(20 * S, 32, 16), mat(0xff7a00)); board.add(ball);
-const ghostBall = new THREE.Mesh(new THREE.SphereGeometry(20 * S, 24, 12), mat(0x00ffff, .35)); board.add(ghostBall);
-const guide = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat(0x1450c8)); board.add(guide);
-const goal = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat(0x2b8cff, .35)); board.add(goal);
-const target = new THREE.Mesh(new THREE.RingGeometry(16 * S, 24 * S, 40), new THREE.MeshBasicMaterial({ color: 0x3fdc7a, side: THREE.DoubleSide }));
+const mat = (c, o = 1, extra = {}) => new THREE.MeshStandardMaterial({ color: c, transparent: o < 1, opacity: o, depthWrite: o === 1, roughness: .55, ...extra });
+const box = () => new THREE.BoxGeometry(1, 1, 1);
+const solid = (geo, m) => { const o = new THREE.Mesh(geo, m); board.add(o); return o; };
+const plane = solid(box(), mat(0x23262c, 1, { roughness: .9 }));
+plane.add(new THREE.LineSegments(new THREE.EdgesGeometry(box()), new THREE.LineBasicMaterial({ color: 0x454a54 })));
+const boardGrid = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x30343b })); board.add(boardGrid);
+const ball = solid(new THREE.SphereGeometry(20 * S, 32, 16), mat(0xff7a1a, 1, { roughness: .35, emissive: 0x3a1600 }));
+const ghostBall = solid(new THREE.SphereGeometry(20 * S, 24, 12), mat(0x00e5ff, .35));
+const guide = solid(box(), mat(0x3b6cf6));
+const goal = solid(box(), mat(0x2b8cff, .3));
+const target = new THREE.Mesh(new THREE.RingGeometry(16 * S, 24 * S, 48), new THREE.MeshBasicMaterial({ color: 0x4cb782, side: THREE.DoubleSide }));
 target.rotation.x = -Math.PI / 2; board.add(target);
 [ball, ghostBall, guide, goal, target].forEach((m) => { m.visible = false; });
 const obstacles = [], lines = {};
+const lineMats = {  // fat lines: WebGL ignores linewidth on plain lines
+  alt: new LineMaterial({ color: 0x5ac8c8, linewidth: 1, transparent: true, opacity: .3, depthWrite: false }),
+  ghost: new LineMaterial({ color: 0x78dcff, linewidth: 1.5, transparent: true, opacity: .55, depthWrite: false }),
+  pred: new LineMaterial({ color: 0x00e5ff, linewidth: 3 }),
+  obs: new LineMaterial({ color: 0xff4d4d, linewidth: 3 }),
+};
 function setBoard(w, h, tilt) {
-  W = w; H = h; plane.scale.set(w * S, 4 * S, h * S); plane.position.set(0, -2 * S, 0);
   board.rotation.x = tilt * Math.PI / 180;
+  if (`${w}x${h}` === boardKey) return;
+  boardKey = `${w}x${h}`; W = w; H = h;
+  plane.scale.set(w * S, 12 * S, h * S); plane.position.set(0, -6 * S, 0);
+  const v = [];  // 50 mm grid, like a cutting mat
+  for (let x = 50; x < w; x += 50) v.push(P(x, 0, 1), P(x, h, 1));
+  for (let y = 50; y < h; y += 50) v.push(P(0, y, 1), P(w, y, 1));
+  boardGrid.geometry.dispose(); boardGrid.geometry = new THREE.BufferGeometry().setFromPoints(v);
 }
 function place(mesh, o, len, wid, ht) {
   mesh.visible = !!o; if (!o) return;
   mesh.scale.set(len * S, ht * S, wid * S); mesh.position.copy(P(o[0], o[1], ht / 2)); mesh.rotation.y = -o[2] * Math.PI / 180;
 }
-function setLine(key, paths, color, opacity) {
+function setLine(key, paths) {
   (lines[key] || []).forEach((l) => { board.remove(l); l.geometry.dispose(); });
   lines[key] = (paths || []).filter((p) => p && p.length > 1).map((p) => {
-    const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(p.map((q) => P(q[0], q[1], 20))),
-      new THREE.LineBasicMaterial({ color, transparent: opacity < 1, opacity }));
-    board.add(l); return l;
+    const g = new LineGeometry(); g.setPositions(p.flatMap((q) => P(q[0], q[1], 20).toArray()));
+    const l = new Line2(g, lineMats[key]); board.add(l); return l;
   });
 }
-let rehearse = null, rehearseT = 0, lastKey = '';
+let rehearse = null, lastKey = '', dirty = true, last = 0;
 function twin(st) {
+  dirty = true;
   const [bw, bh, tilt] = st.board; setBoard(bw, bh, tilt);
   const sc = st.scene, ov = st.overlay || {};
   ball.visible = !!sc.ball; if (sc.ball) ball.position.copy(P(sc.ball.x, sc.ball.y, 20));
   place(guide, sc.guide && [sc.guide.x, sc.guide.y, sc.guide.angle], 180, 15, 30);
   place(goal, ov.goal, 180, 15, 30);
   target.visible = !!sc.target; if (sc.target) target.position.copy(P(sc.target.x, sc.target.y, 1));
-  while (obstacles.length < sc.obstacles.length) { const m = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat(0xc040b0)); board.add(m); obstacles.push(m); }
+  while (obstacles.length < sc.obstacles.length) obstacles.push(solid(box(), mat(0xc147b8)));
   obstacles.forEach((m, i) => { const o = sc.obstacles[i]; place(m, o && [o.x, o.y, o.angle], o ? o.length : 1, o ? o.width : 1, 40); });
   const key = JSON.stringify([st.plan && st.plan.guide, ov.pred_path && ov.pred_path[ov.pred_path.length - 1], (ov.ghosts || []).length, (ov.observed || []).length]);
   if (key !== lastKey) {  // rebuild path geometry only when the paths actually change
     lastKey = key;
-    setLine('alt', ov.alternatives, 0x5ac8c8, .35); setLine('ghost', ov.ghosts, 0x78dcff, .55);
-    setLine('pred', ov.pred_path ? [ov.pred_path] : [], 0x00ffff, 1); setLine('obs', ov.observed ? [ov.observed] : [], 0xff3b3b, 1);
+    setLine('alt', ov.alternatives); setLine('ghost', ov.ghosts);
+    setLine('pred', ov.pred_path ? [ov.pred_path] : []); setLine('obs', ov.observed ? [ov.observed] : []);
   }
   rehearse = ['placing', 'ready'].includes(st.state) ? ov.pred_path : null;
 }
+let cw = 0, ch = 0;
 function resize() {
   const w = canvas.clientWidth, h = canvas.clientHeight;
-  if (canvas.width !== w || canvas.height !== h) { renderer.setSize(w, h, false); cam3.aspect = w / h; cam3.updateProjectionMatrix(); }
+  if (w === cw && h === ch) return;
+  cw = w; ch = h; renderer.setSize(w, h, false); cam3.aspect = w / h; cam3.updateProjectionMatrix();
+  Object.values(lineMats).forEach((m) => m.resolution.set(w, h)); dirty = true;
 }
-(function loop() {
-  resize();
+orbit.addEventListener('change', () => { dirty = true; });
+(function loop(now) {  // draw only when something moved, so software-rendered browsers stay responsive
+  requestAnimationFrame(loop);
+  resize(); orbit.update();
   ghostBall.visible = !!rehearse;
-  if (rehearse) { rehearseT = (rehearseT + 1) % (rehearse.length + 30); const q = rehearse[Math.min(rehearseT, rehearse.length - 1)]; ghostBall.position.copy(P(q[0], q[1], 20)); }
-  renderer.render(scene3, cam3); requestAnimationFrame(loop);
-})();
+  if (rehearse && now - last > 33) {
+    const q = rehearse[Math.min(Math.floor(now / 16.7) % (rehearse.length + 30), rehearse.length - 1)];
+    ghostBall.position.copy(P(q[0], q[1], 20)); dirty = true;
+  }
+  if (!dirty) return;
+  dirty = false; last = now; renderer.render(scene3, cam3);
+})(0);
 
 // ---------- panels ----------
+const PARAMS = { mu_roll: ['Rolling resistance', 0, 0.08], damp: ['Speed damping', 0, 1.5], rest: ['Bounce', 0.05, 0.9], mu_wall: ['Guide friction', 0, 0.6] };  // bounds = physics.BOUNDS
+const STEP = { calibrating: 0, placing: 1, ready: 2, trial: 3, reset: 4, success: 4 };
+const NEXT = { placing: 'place', ready: 'release', reset: 'reset_ball', success: 'new_layout' };
+const CMD = { place: 'placed the guide', release: 'released the ball', reset_ball: 'put the ball back at the gate', move_obstacle: 'moved an obstacle',
+  occlude: 'blocked or cleared the camera view', auto: 'toggled auto-follow', new_layout: 'asked for a new layout', restart: 'restarted the session' };
+const changed = (a = {}, b = {}) => Object.keys(b).filter((k) => Math.abs(b[k] - a[k]) > 1e-4)
+  .map((k) => `${(PARAMS[k] ? PARAMS[k][0] : k).toLowerCase()} ${fmt(a[k], 3)} → ${fmt(b[k], 3)}`).join(', ') || 'no change';
+function describe(e) {  // -> [colour, title, detail, why]
+  const g = e.guide || [];
+  switch (e.event) {
+    case 'scene_ready': return ['var(--accent-hi)', 'Board measured', `${e.obstacles} obstacle${e.obstacles === 1 ? '' : 's'}, target at (${(e.target || []).join(', ')}) mm`];
+    case 'plan': return ['var(--accent-hi)', 'New plan', `Guide to (${fmt(g[0], 0)}, ${fmt(g[1], 0)}) mm at ${fmt(g[2], 0)}° · predicted miss ${fmt(e.miss_nominal)} mm · hits under ${fmt(100 * e.p_hit, 0)}% of plausible physics`, e.why];
+    case 'placement_verified': return ['var(--ok)', 'Placement verified', `Guide within ${fmt(e.error_mm)} mm and ${fmt(e.error_deg)}° of the plan · predicted miss ${fmt(e.predicted_miss)} mm`];
+    case 'guide_disturbed': return ['var(--warn)', 'Guide moved after verification', 'Waiting for it to be placed again'];
+    case 'release_detected': return ['var(--text-2)', 'Ball released', 'Tracking the roll'];
+    case 'trial_result': return [e.hit ? 'var(--ok)' : 'var(--bad)', `Trial ${e.n}: ${e.hit ? 'hit' : 'miss'}`, `${fmt(e.miss_mm)} mm from the target (predicted ${fmt(e.pred_miss_mm)} mm) · path error ${fmt(e.traj_err_mm)} mm`];
+    case 'model_updated': return ['var(--orange)', 'Physics re-fitted', `${changed(e.before, e.after)} · path error ${fmt(e.prior_err_mm)} → ${fmt(e.fit_err_mm)} mm`];
+    case 'model_update_skipped': return ['var(--muted)', 'Learning skipped', e.reason];
+    case 'plan_invalidated': return ['var(--warn)', 'Layout changed, plan discarded', (e.changes || []).join('; ')];
+    case 'new_challenge': return ['var(--accent-hi)', 'New challenge', (e.changes || []).join('; ')];
+    case 'clear_view_requested': return ['var(--bad)', 'Camera view blocked', `${e.reason}. Holding the plan`];
+    case 'view_restored': return ['var(--ok)', 'View restored', ''];
+    case 'human_command': return ['var(--faint)', `You ${CMD[e.cmd] || e.cmd}`, ''];
+    default: {
+      const { t, state, scene_version, event, ...rest } = e;
+      return ['var(--muted)', event.replace(/_/g, ' '), Object.entries(rest).map(([k, v]) => `${k} ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(' · ')];
+    }
+  }
+}
+let evKey = '';
+function feed(events) {
+  const k = events.length + JSON.stringify(events[events.length - 1] || '');
+  if (k === evKey) return;
+  evKey = k;
+  $('events').innerHTML = events.slice().reverse().map((e) => {
+    const [c, title, detail, why] = describe(e);
+    return `<li style="--c:${c}"><span class="node"></span><div><div class="ev-t">${esc(title)}</div>${detail ? `<div class="ev-d">${esc(detail)}</div>` : ''}`
+      + `${why ? `<div class="ev-why">${esc(why)}</div>` : ''}</div><span class="ev-m">v${e.scene_version} · ${fmt(e.t, 1)} s</span></li>`;
+  }).join('');
+}
+function params(st) {
+  const boxEl = $('params');
+  if (!boxEl.children.length) boxEl.innerHTML = Object.entries(PARAMS).map(([k, [name]]) => `<div class="param" data-k="${k}"><span class="name">${name}</span>`
+    + `<div class="range"><i class="band"></i><i class="est"></i></div><span class="val"></span></div>`).join('');
+  for (const el of boxEl.children) {
+    const k = el.dataset.k, [, lo, hi] = PARAMS[k], v = st.params[k], fitted = st.ranges && st.ranges[k], r = fitted || [v * 0.8, v * 1.2];
+    const x = (u) => Math.max(0, Math.min(100, 100 * (u - lo) / (hi - lo)));
+    el.querySelector('.val').textContent = fmt(v, 3);
+    el.querySelector('.band').style.left = `${x(r[0])}%`; el.querySelector('.band').style.width = `${x(r[1]) - x(r[0])}%`;
+    el.querySelector('.est').style.left = `${x(v)}%`;
+    el.title = `${k}: ${fitted ? `plausible ${fmt(r[0], 3)} – ${fmt(r[1], 3)}` : 'prior belief ±20%'}`;
+  }
+}
 function panels(st) {
-  $('state').textContent = st.state;
+  const s = st.state;
+  $('state').textContent = s; $('state').dataset.s = s;
   $('instruction').textContent = st.instruction;
-  $('why').textContent = st.why ? 'Why: ' + st.why : '';
+  $('why').innerHTML = st.why ? `<b>Why</b>${esc(st.why)}` : '';
   $('blocked').style.display = st.blocked ? 'block' : 'none';
   $('blocked').textContent = st.blocked ? `Camera view unclear (${st.blocked}). Holding the plan; clear the view to continue.` : '';
-  const p = st.plan || {};
-  $('plan').innerHTML = p.guide ? [
-    ['guide pose', `(${fmt(p.guide[0], 0)}, ${fmt(p.guide[1], 0)}) mm, ${fmt(p.guide[2], 1)}°`],
-    ['predicted miss', `${fmt(p.miss_nominal)} mm (worst ${fmt(p.miss_worst)} mm)`],
-    ['hit across plausible physics', `${fmt(100 * p.p_hit, 0)}%`],
-    ['rollouts / latency', `${p.candidates} / ${fmt(p.latency_ms, 0)} ms`],
-    ['made for layout', `v${p.scene_version} (now v${st.scene.version})`],
-  ].map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('') : '<tr><td>No plan yet</td></tr>';
-  const r = st.ranges || {};
-  $('params').innerHTML = '<tr><th>param</th><th>estimate</th><th>plausible range</th></tr>' + Object.entries(st.params).map(([k, v]) =>
-    `<tr><td>${k}</td><td>${fmt(v, 3)}</td><td>${r[k] ? fmt(r[k][0], 3) + ' – ' + fmt(r[k][1], 3) : 'prior ±20%'}</td></tr>`).join('');
-  $('trials').innerHTML = '<tr><th>#</th><th>result</th><th>miss</th><th>predicted</th><th>traj err</th></tr>' + st.trials.map((t) =>
-    `<tr><td>${t.n}</td><td class="${t.hit ? 'hit' : 'miss'}">${t.hit ? 'HIT' : 'miss'}</td><td>${fmt(t.miss_mm, 0)} mm</td><td>${fmt(t.pred_miss_mm, 0)} mm</td><td>${fmt(t.traj_err_mm)} mm</td></tr>`).join('');
-  $('events').innerHTML = st.events.slice().reverse().map((e) => {
-    const { t, state, scene_version, event, ...rest } = e;
-    return `<li><span class="v">v${scene_version}</span> t=${fmt(t, 2)} <b>${event}</b> ${JSON.stringify(rest).slice(0, 220).replace(/</g, '&lt;')}</li>`;
-  }).join('');
+  $('layout').textContent = `layout v${st.scene.version}`;
+  const i = STEP[s] ?? 0;
+  [...$('steps').children].forEach((li, k) => { li.className = k < i ? 'done' : k > i ? '' : `now${s === 'success' ? ' ok' : s === 'reset' ? ' learn' : ''}`; });
+  $('steps').lastElementChild.textContent = s === 'success' ? 'Hit' : 'Learn';
+  $('attempt').textContent = s === 'calibrating' ? '' : `Attempt ${st.trials.length + (['reset', 'success'].includes(s) ? 0 : 1)}`;
+  const p = st.plan || {}, stale = p.guide && p.scene_version !== st.scene.version;
+  $('madefor').textContent = p.guide ? `made for layout v${p.scene_version}${stale ? `, now v${st.scene.version}` : ''}` : '';
+  $('madefor').classList.toggle('stale', !!stale);
+  $('plan').innerHTML = p.guide ? `<dt>Guide pose</dt><dd>(${fmt(p.guide[0], 0)}, ${fmt(p.guide[1], 0)}) mm · ${fmt(p.guide[2], 1)}°</dd>`
+    + `<dt>Predicted miss</dt><dd>${fmt(p.miss_nominal)} mm <span class="dim">· worst ${fmt(p.miss_worst)}</span></dd>`
+    + `<dt title="Share of plausible physics under which this plan hits">Hit chance</dt><dd>${fmt(100 * p.p_hit, 0)}%<div class="meter"><i style="width:${100 * p.p_hit}%"></i></div></dd>`
+    + `<dt>Rehearsed</dt><dd>${Number(p.candidates).toLocaleString('en-US')} rollouts <span class="dim">· ${fmt(p.latency_ms, 0)} ms</span></dd>`
+    : '<div class="empty">Measuring the board...</div>';
+  params(st);
+  $('trials').innerHTML = st.trials.length ? '<table class="tbl"><tr><th>#</th><th>Result</th><th>Off by</th><th>Predicted</th><th>Path err</th></tr>'
+    + st.trials.map((t) => `<tr><td>${t.n}</td><td><span class="res ${t.hit ? 'hit' : ''}">${t.hit ? 'Hit' : 'Miss'}</span></td><td>${fmt(t.miss_mm, 0)} mm</td>`
+      + `<td>${fmt(t.pred_miss_mm, 0)} mm</td><td>${fmt(t.traj_err_mm)} mm</td></tr>`).join('') + '</table>'
+    : '<div class="empty">No trials yet</div>';
+  feed(st.events);
 }
 
 // ---------- transport ----------
 let ws = null, mode = 'synthetic', stream = null;
 const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+const cmds = document.querySelectorAll('button[data-cmd]');
 function connect(m) {
   if (ws) ws.close();
   mode = m; $('btnSyn').classList.toggle('on', m === 'synthetic'); $('btnCam').classList.toggle('on', m === 'camera');
-  document.querySelectorAll('#controls button').forEach((b) => { b.hidden = m === 'camera' && b.dataset.cmd !== 'restart'; });
+  cmds.forEach((b) => { b.hidden = m === 'camera' && b.dataset.cmd !== 'restart'; b.classList.remove('primary'); });
+  $('controls').classList.toggle('cam', m === 'camera');
   ws = new WebSocket(`${proto}://${location.host}/ws?mode=${m}`);
   ws.onopen = () => { $('conn').textContent = 'connected'; if (m === 'camera') sendFrame(); };
-  ws.onclose = (e) => { $('conn').textContent = e.reason || 'disconnected'; };
+  ws.onclose = (e) => { $('conn').textContent = e.reason || 'disconnected'; $('conn').classList.remove('live'); };
   ws.onmessage = (ev) => {
     const msg = JSON.parse(ev.data);
-    if (msg.type === 'hello') { $('conn').textContent = msg.session; return; }
+    if (msg.type === 'hello') { $('conn').textContent = msg.session; $('conn').classList.add('live'); return; }
     if (msg.type === 'note') { $('note').textContent = msg.text; return; }
     $('cam').src = msg.img; panels(msg.status); twin(msg.status);
-    if (mode === 'synthetic') { $('auto').classList.toggle('on', msg.auto); $('occ').classList.toggle('on', msg.occluded); $('note').textContent = ''; }
-    else sendFrame();
+    if (mode === 'synthetic') {
+      $('auto').classList.toggle('on', msg.auto); $('occ').classList.toggle('on', msg.occluded); $('note').textContent = '';
+      cmds.forEach((b) => b.classList.toggle('primary', !msg.auto && b.dataset.cmd === NEXT[msg.status.state]));
+    } else sendFrame();
   };
 }
 const grab = document.createElement('canvas'); grab.width = 960; grab.height = 720;
@@ -216,7 +414,7 @@ $('btnCam').onclick = async () => {
     $('video').srcObject = stream; await $('video').play(); connect('camera');
   } catch (e) { $('instruction').textContent = 'Camera unavailable: ' + e.message + ' (needs HTTPS or localhost).'; }
 };
-document.querySelectorAll('#controls button').forEach((b) => { b.onclick = () => ws && ws.readyState === 1 && ws.send(JSON.stringify({ cmd: b.dataset.cmd })); });
+cmds.forEach((b) => { b.onclick = () => ws && ws.readyState === 1 && ws.send(JSON.stringify({ cmd: b.dataset.cmd })); });
 connect('synthetic');
 </script>
 </body>

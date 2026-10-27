@@ -10,14 +10,14 @@ plan before you act on it.
 The camera is the experimental scientist; you are its hands.
 
 - **Live demo on AWS: http://ec2-98-93-53-0.compute-1.amazonaws.com**. It opens on the synthetic tabletop, so no hardware is needed. Press *Auto-follow
-  instructions* to watch the whole loop, or drive it yourself with *Place guide as instructed* → *Release ball*.
-  *Move an obstacle* and *Block the camera* show the human-control cases. It is plain HTTP until AWS enables
+  instructions* to watch the whole loop, or drive it yourself with *Place guide* → *Release ball*.
+  *Move obstacle* and *Block camera* show the human-control cases. It is plain HTTP until AWS enables
   CloudFront for this new account, so *Use my camera* (which needs HTTPS) works only on a local run for now.
 - Technical report: [REPORT.md](REPORT.md)
 - Evaluation results: [eval/results.md](eval/results.md), first-milestone clip: [eval/first_milestone.mp4](eval/first_milestone.mp4), example decision trace: [eval/trace_example.json](eval/trace_example.json)
 - Competition path: **Agentic Vision with OpenCV 5**: OpenCV measurements change the next plan, instruction and model update.
 
-![REALITY.EXE UI: missed by 193 mm, re-fitted physics, hit by 2 mm](docs/ui.png)
+![REALITY.EXE UI: missed by 194 mm, re-fitted physics, then hit 1.3 mm from the target](docs/ui.png)
 
 ```mermaid
 flowchart LR
@@ -54,7 +54,7 @@ python -m venv .venv
 Open <http://localhost:8000>. The **Synthetic tabletop** (default) needs no hardware: the server renders
 camera frames of a board whose ball physics come from Newton with hidden parameters, and the agent only
 sees those frames. Press **Auto-follow instructions** to watch the loop run itself, or use the buttons as
-your hands: *Place guide*, *Release ball*, *Move an obstacle*, *Block the camera*.
+your hands: *Place guide*, *Release ball*, *Move obstacle*, *Block camera*.
 
 **Use my camera** streams your webcam to the same agent (browsers allow camera access on `localhost` or HTTPS).
 
@@ -111,7 +111,7 @@ Without AWS: `docker build -t reality-exe . && docker run -p 8000:8000 reality-e
 1. **0:00–0:30 Team + problem:** tuning physical setups is trial and error, and the camera can do the science.
 2. **0:30–1:00 Architecture:** the diagram above. OpenCV 5 runs on EC2 behind CloudFront, evidence goes to S3, decisions go to CloudWatch.
 3. **1:00–2:30 The loop live** (`AppUrl`, synthetic tabletop, *Auto-follow*): prediction and ghosts → placement verified → real miss → *"re-fitted physics: …"* → new instruction → hit.
-4. **2:30–3:15 Human control:** press *Move an obstacle* mid-instruction (plan discarded, layout version bumps), then *Block the camera* (clear-view request, nothing issued).
+4. **2:30–3:15 Human control:** press *Move obstacle* mid-instruction (plan discarded, layout version bumps), then *Block camera* (clear-view request, nothing issued).
 5. **3:15–4:15 Results:** `eval/results.md` (adaptive vs fixed physics, trajectory error, recovery, occlusion, latency), the trace, CloudWatch log lines, the S3 evidence objects.
 6. **4:15–5:00 Limitations + responsible use:** synthetic-only results so far, human-in-the-loop by design, private 30-day evidence retention.
 
