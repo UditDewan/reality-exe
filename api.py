@@ -7,6 +7,7 @@ import asyncio
 import base64
 import json
 import logging
+import math
 import os
 import struct
 import time
@@ -14,7 +15,7 @@ import uuid
 
 import cv2 as cv
 import numpy as np
-from fastapi import FastAPI, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Response, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -24,7 +25,7 @@ from controller import Controller
 from evaluate import layout
 from scene import Obj, Scene, load_config
 from vision import Vision
-from world import World
+from world import World, marker_sheet
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger("reality")
@@ -32,9 +33,24 @@ CFG = load_config()
 BUCKET = os.environ.get("TRACE_BUCKET")
 MAX_SESSIONS = int(os.environ.get("MAX_SESSIONS", "8"))
 MAX_FRAME = 2_000_000
-COMMANDS = {"place", "release", "reset_ball", "move_obstacle", "occlude", "auto", "new_layout", "restart"}
+COMMANDS = {"place", "release", "reset_ball", "move_obstacle", "occlude", "auto", "new_layout", "restart", "set"}
+PIECES = {"guide", "target", "obstacle"}
 sessions = {}
 app = FastAPI(title="REALITY.EXE")
+
+
+def nums(m, *keys):
+    """Finite floats for `keys` of a browser message, or None if any is missing or malformed."""
+    try:
+        v = [float(m[k]) for k in keys]
+    except (KeyError, TypeError, ValueError, OverflowError):
+        return None
+    return v if all(map(math.isfinite, v)) else None
+
+
+def on_board(x, y, a):
+    """A dragged pose kept clear of the corner markers and the release gate; angle folded to [-90, 90)."""
+    return min(max(x, 60.0), CFG.board_w - 60), min(max(y, 90.0), CFG.board_h - 50), (a + 90) % 180 - 90
 
 
 def save_trace(sid, ctrl, frame=None):
@@ -98,6 +114,13 @@ def plan_job(job: PlanJob):
     p = planner.plan(CFG, sc, samples, current=sc.guide)
     p["instruction"] = planner.instruction(sc.guide, p["guide"])
     return p
+
+
+@app.get("/markers.png")
+def markers():
+    """Printable ArUco sheet for the physical board (print at 100%)."""
+    return Response(cv.imencode(".png", marker_sheet(CFG))[1].tobytes(), media_type="image/png",
+                    headers={"Content-Disposition": 'attachment; filename="reality-exe-markers.png"'})
 
 
 @app.get("/api/sessions/{sid}/trace")
@@ -164,40 +187,60 @@ async def synthetic_loop(sock, sid, ctrl, seed):
     async def reader():
         while True:
             try:
-                c = json.loads(await sock.receive_text()).get("cmd")
-            except (ValueError, AttributeError):
+                m = json.loads(await sock.receive_text())
+            except ValueError:
                 continue
-            if c in COMMANDS:
-                await cmds.put(c)
+            if isinstance(m, dict) and m.get("cmd") in COMMANDS:
+                await cmds.put(m)
 
     task = asyncio.create_task(reader())
     try:
         while not task.done():
             t0 = time.perf_counter()
-            note = None
             while not cmds.empty():
-                c = cmds.get_nowait()
-                ctrl.event("human_command", cmd=c)
+                m = cmds.get_nowait()
+                c, note = m["cmd"], None
+                if c == "set":  # the browser dragged a piece: validate before it touches the world or the logs
+                    pose, src, obj = nums(m, "x", "y", "a"), nums(m, "fx", "fy"), m.get("obj")
+                    if not (pose and src and obj in PIECES):
+                        continue
+                    pose = on_board(*pose)
+                    ctrl.event("human_command", cmd=c, obj=obj, to=[round(v) for v in pose])
+                else:
+                    ctrl.event("human_command", cmd=c)
                 if c == "auto":
                     auto = not auto
                 elif c == "occlude":
                     world.occluded = not world.occluded
-                elif c == "move_obstacle" and world.obstacles:
-                    world.move_obstacle(0)
-                elif c == "place" and ctrl.plan:
-                    world.place_guide(*ctrl.plan["guide"])
-                elif c == "release" and world.traj is None:
-                    note = "Rolling the ball (Newton rigid-body reality)..."
-                    await sock.send_text(json.dumps({"type": "note", "text": note}))
-                    await asyncio.to_thread(world.release)
-                elif c == "reset_ball":
-                    world.reset_ball()
                 elif c in ("new_layout", "restart"):
                     seed = seed + 1 if c == "new_layout" else seed
                     L = layout(seed)
                     world = World(seed=seed, target=L["target"], obstacles=L["obstacles"], guide=L["guide"], truth=L["truth"])
                     if c == "restart":
                         ctrl = sessions[sid] = Controller(CFG, session=sid)
+                elif world.traj is not None:
+                    note = "Wait for the ball to stop first."
+                elif c == "set" and obj == "guide":
+                    world.guide = list(pose)
+                elif c == "set" and obj == "target":
+                    world.target = pose[:2]
+                elif c == "set" and world.obstacles:  # the block nearest to where the drag started
+                    o = min(world.obstacles, key=lambda o: math.hypot(o.x - src[0], o.y - src[1]))
+                    o.x, o.y, o.angle = pose
+                elif c == "move_obstacle" and world.obstacles:
+                    o = world.obstacles[0]  # bounce around the middle so repeated presses stay on the board
+                    world.move_obstacle(0, dx=-70 if o.x > CFG.board_w / 2 else 70, dy=-40 if o.y > CFG.board_h / 2 else 40)
+                elif c == "place" and ctrl.plan:
+                    world.place_guide(*ctrl.plan["guide"])
+                elif c == "release" and ctrl.state != "ready":
+                    note = "Place the guide first: the ball is released once the camera has verified the placement."
+                elif c == "release":
+                    await sock.send_text(json.dumps({"type": "note", "text": "Rolling the ball (Newton rigid-body reality)..."}))
+                    await asyncio.to_thread(world.release)
+                elif c == "reset_ball":
+                    world.reset_ball()
+                if note:
+                    await sock.send_text(json.dumps({"type": "note", "text": note}))
             for _ in range(2):  # perceive every 30 Hz frame, stream every other one (15 fps is plenty for a browser)
                 world.tick()
                 img = world.render()
@@ -207,7 +250,7 @@ async def synthetic_loop(sock, sid, ctrl, seed):
                     await asyncio.to_thread(world.act, ctrl.state, None)
                 elif int(world.t * 15) % 6 == 0:
                     world.act(ctrl.state, (ctrl.plan or {}).get("guide"))
-            await sock.send_text(packet(ctrl, img, {"auto": auto, "occluded": world.occluded, "seed": seed}))
+            await sock.send_text(packet(ctrl, img, {"auto": auto, "occluded": world.occluded, "seed": seed, "rolling": world.traj is not None}))
             if len(ctrl.trials) != trials:
                 trials = len(ctrl.trials)
                 await asyncio.to_thread(save_trace, sid, ctrl, ctrl.annotate(img))

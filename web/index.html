@@ -20,14 +20,17 @@
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--text); font:13px/1.5 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
          -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums; }
+  a { color:var(--accent-hi); }
   .app { height:100vh; display:grid; grid-template-rows:auto minmax(0,1fr); grid-template-columns:minmax(0,1fr); }
-  button { font:inherit; font-weight:500; color:var(--text-2); background:var(--raised); border:1px solid var(--line-2); border-radius:6px;
-           height:30px; padding:0 12px; cursor:pointer; white-space:nowrap; transition:background .12s, border-color .12s, color .12s; }
-  button:hover { background:var(--hover); color:var(--text); }
-  button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  button, .btn { display:inline-flex; align-items:center; font:inherit; font-weight:500; color:var(--text-2); background:var(--raised);
+           border:1px solid var(--line-2); border-radius:6px; height:30px; padding:0 12px; cursor:pointer; white-space:nowrap; text-decoration:none;
+           transition:background .12s, border-color .12s, color .12s, opacity .12s; }
+  button:hover, .btn:hover { background:var(--hover); color:var(--text); }
+  button:focus-visible, .btn:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
   button.primary:hover { background:var(--accent-hi); border-color:var(--accent-hi); }
   button.ghost:not(.primary) { background:transparent; }
+  button:disabled, button:disabled:hover { opacity:.38; cursor:not-allowed; background:var(--raised); color:var(--text-2); }
 
   header { display:flex; align-items:center; gap:10px; padding:10px 12px 10px 16px; }
   .brand { display:flex; align-items:center; gap:9px; font-weight:600; font-size:14px; letter-spacing:.02em; white-space:nowrap; }
@@ -39,10 +42,11 @@
   .seg button.on { background:var(--hover); border-color:var(--line-2); color:var(--text); }
   .pill { display:inline-flex; align-items:center; gap:7px; height:30px; padding:0 11px; border:1px solid var(--line); border-radius:99px;
           color:var(--muted); font:500 11.5px var(--mono); white-space:nowrap; }
-  .pill::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--faint); }
+  .pill::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--warn); }
   .pill.live::before { background:var(--ok); box-shadow:0 0 0 3px rgba(76,183,130,.18); }
 
   main { min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:8px; padding:0 8px 8px; }
+  main > * { min-width:0; }
   .panel { min-height:0; background:var(--panel); border:1px solid var(--line); border-radius:12px; }
   .stage { display:flex; flex-direction:column; overflow:auto; }
   .head { flex:none; display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; min-height:46px; padding:8px 14px; border-bottom:1px solid var(--line); }
@@ -50,25 +54,28 @@
   .tag { padding:1px 7px; border:1px solid var(--line-2); border-radius:5px; color:var(--muted); font:500 11.5px var(--mono); }
   .legend { margin-left:auto; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:2px 14px; color:var(--muted); font-size:12px; }
   .legend i { display:inline-block; width:12px; height:3px; margin-right:6px; border-radius:2px; vertical-align:middle; }
-  main > * { min-width:0; }
   .views { flex:none; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px; padding:12px 12px 0; }
   .view { position:relative; margin:0; overflow:hidden; border:1px solid var(--line); border-radius:8px; background:#0c0d0f; }
   #cam, #twin { display:block; width:100%; aspect-ratio:4/3; }
   #cam { object-fit:cover; }
-  #twin { cursor:grab; } #twin:active { cursor:grabbing; }
-  .view figcaption { position:absolute; left:8px; top:8px; padding:2px 8px; border:1px solid rgba(255,255,255,.08); border-radius:6px;
-                     background:rgba(8,9,10,.82); color:var(--text-2); font-size:11.5px; pointer-events:none; }
-  .toolbar { flex:none; display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:12px; }
+  #twin { cursor:grab; } .view.over #twin { cursor:move; } .view.dragging #twin { cursor:grabbing; }
+  .badge { position:absolute; left:8px; top:8px; max-width:calc(100% - 16px); padding:2px 8px; border:1px solid rgba(255,255,255,.08); border-radius:6px;
+           background:rgba(8,9,10,.82); color:var(--text-2); font-size:11.5px; pointer-events:none; }
+  .badge.low { top:auto; bottom:8px; color:var(--muted); }
+  .hint { flex:none; margin:12px 12px 0; padding:8px 12px; border:1px solid var(--line-2); border-radius:8px; background:var(--raised); color:var(--text-2); }
+  .hint::before { content:""; display:inline-block; width:7px; height:7px; margin:0 10px 0 2px; border-radius:50%; vertical-align:1px;
+                  background:var(--accent-hi); box-shadow:0 0 0 4px rgba(130,139,240,.18); }
+  .hint b { color:var(--text); font-weight:600; }
+  .hint.note { border-color:rgba(242,201,76,.5); } .hint.note::before { background:var(--warn); box-shadow:0 0 0 4px rgba(242,201,76,.18); }
+  .toolbar { flex:none; display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:10px 12px 12px; }
   .toolbar .sep { width:1px; height:18px; margin:0 4px; background:var(--line-2); }
-  .toolbar.cam .sep { display:none; }
+  .toolbar.cam { display:none; }
   .toolbar button.on { color:var(--text); background:rgba(235,87,87,.12); border-color:var(--bad); }
-  .toolbar button.on::before { content:""; display:inline-block; width:6px; height:6px; margin-right:7px; border-radius:50%; background:var(--bad); vertical-align:1px; }
+  .toolbar button.on::before { content:""; display:inline-block; width:6px; height:6px; margin-right:7px; border-radius:50%; background:var(--bad); }
   .toolbar .cta { margin-left:auto; color:var(--text); background:rgba(94,106,210,.14); border-color:rgba(130,139,240,.55); }
-  .toolbar .cta::before { content:""; display:inline-block; margin-right:8px; border-left:7px solid var(--accent-hi); border-top:4.5px solid transparent;
-                          border-bottom:4.5px solid transparent; vertical-align:-1px; }
+  .toolbar .cta::before { content:""; display:inline-block; margin-right:8px; border-left:7px solid var(--accent-hi); border-top:4.5px solid transparent; border-bottom:4.5px solid transparent; }
   .toolbar .cta.on { background:rgba(76,183,130,.12); border-color:var(--ok); }
-  .toolbar .cta.on::before { width:7px; height:7px; border:0; border-radius:50%; background:var(--ok); box-shadow:0 0 0 3px rgba(76,183,130,.22); vertical-align:0; }
-  #note { color:var(--muted); font-size:12px; }
+  .toolbar .cta.on::before { width:7px; height:7px; border:0; border-radius:50%; background:var(--ok); box-shadow:0 0 0 3px rgba(76,183,130,.22); }
   .sub { flex:none; display:flex; align-items:baseline; gap:10px; padding:12px 16px 4px; border-top:1px solid var(--line); }
   .sub h2 { margin:0; font-size:13px; font-weight:600; }
   .sub span { color:var(--faint); font-size:12px; }
@@ -124,9 +131,18 @@
   .tbl td { padding:5px 0; border-top:1px solid var(--line); text-align:right; }
   .tbl th:nth-child(-n+2), .tbl td:nth-child(-n+2) { text-align:left; }
   .res { font-weight:500; color:var(--bad); }
-  .res::before { content:""; display:inline-block; width:7px; height:7px; margin-right:6px; border:1.5px solid currentColor; border-radius:50%; vertical-align:0; }
+  .res::before { content:""; display:inline-block; width:7px; height:7px; margin-right:6px; border:1.5px solid currentColor; border-radius:50%; }
   .res.hit { color:var(--ok); } .res.hit::before { background:currentColor; }
   .empty { color:var(--faint); }
+
+  dialog { max-width:min(560px, calc(100vw - 32px)); padding:22px 24px; border:1px solid var(--line-2); border-radius:12px; background:var(--panel);
+           color:var(--text); box-shadow:0 20px 60px rgba(0,0,0,.6); }
+  dialog::backdrop { background:rgba(0,0,0,.6); }
+  dialog h3 { margin:0 0 8px; font-size:16px; font-weight:600; }
+  dialog p, dialog li { color:var(--text-2); }
+  dialog ol { margin:12px 0; padding-left:20px; } dialog li + li { margin-top:8px; }
+  dialog code { padding:1px 5px; border-radius:4px; background:var(--raised); font:12px var(--mono); }
+  .actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; margin:16px 0 0; }
 
   @media (max-width:1100px) { .app { height:auto; } main { grid-template-columns:1fr; } .stage { overflow:visible; } .feed { max-height:360px; } }
   @media (max-width:720px) { header { flex-wrap:wrap; } .tagline { display:none; } .views { grid-template-columns:1fr; } .toolbar .cta { margin-left:0; } }
@@ -160,17 +176,18 @@
       </div>
     </div>
     <div class="views">
-      <figure class="view"><img id="cam" alt="Annotated camera view of the board"><figcaption>Camera · OpenCV overlay</figcaption></figure>
-      <figure class="view"><canvas id="twin" aria-label="3D digital twin of the board"></canvas><figcaption>Digital twin · drag to orbit</figcaption></figure>
+      <figure class="view"><img id="cam" alt="Annotated camera view of the board"><figcaption class="badge">Camera · OpenCV overlay</figcaption></figure>
+      <figure class="view"><canvas id="twin" aria-label="3D digital twin of the board. Drag pieces to move them."></canvas>
+        <figcaption class="badge">Digital twin</figcaption><span id="tip" class="badge low">Drag pieces to move · scroll to rotate · drag background to orbit</span></figure>
     </div>
+    <div id="hint" class="hint" aria-live="polite">Connecting…</div>
     <div id="controls" class="toolbar" aria-label="Synthetic tabletop controls (your hands)">
-      <button data-cmd="place" title="Move the guide to the instructed pose">Place guide</button>
-      <button data-cmd="release" title="Let the ball go from the gate">Release ball</button>
-      <button data-cmd="reset_ball" title="Put the ball back at the gate">Reset ball</button>
+      <button data-cmd="place">Place guide</button>
+      <button data-cmd="release">Release ball</button>
+      <button data-cmd="reset_ball">Reset ball</button>
       <span class="sep"></span>
-      <button data-cmd="move_obstacle" title="Move an obstacle while the agent is instructing">Move obstacle</button>
-      <button data-cmd="occlude" id="occ" title="Cover the camera">Block camera</button>
-      <span id="note" aria-live="polite"></span>
+      <button data-cmd="move_obstacle">Move obstacle</button>
+      <button data-cmd="occlude" id="occ" title="Cover the camera: the agent must hold instead of guessing">Block camera</button>
       <button data-cmd="auto" id="auto" class="cta" title="Let a scripted human follow every instruction">Auto-follow instructions</button>
     </div>
     <div class="sub"><h2>Activity</h2><span>Decision trace: every OpenCV result that changed what happens next</span></div>
@@ -190,6 +207,18 @@
   </aside>
 </main>
 </div>
+<dialog id="camHelp" aria-labelledby="camTitle">
+  <h3 id="camTitle">Camera mode needs HTTPS</h3>
+  <p id="camWhy"></p>
+  <ol>
+    <li>Run REALITY.EXE on your computer (<a href="https://github.com/UditDewan/reality-exe#run-it-locally-5-minutes" target="_blank" rel="noopener">5-minute guide</a>):
+      <code>docker build -t reality-exe . &amp;&amp; docker run -p 8000:8000 reality-exe</code>, then open <code>http://localhost:8000</code>.</li>
+    <li>Print the <a href="/markers.png" download>marker sheet</a> at 100% and tape ids 0–3 at the corners of a 600 × 450 mm board; id 4 marks the target.</li>
+    <li>Add an orange ball, a blue guide bar and magenta blocks (<a href="https://github.com/UditDewan/reality-exe#the-physical-setup" target="_blank" rel="noopener">setup</a>), tilt the board about 8°, and press <b>Use my camera</b>.</li>
+  </ol>
+  <p class="dim">Until then, the synthetic tabletop runs the same OpenCV pipeline on rendered camera frames, and you can move its pieces by dragging them.</p>
+  <form method="dialog" class="actions"><a class="btn" href="/markers.png" download>Download marker sheet</a><button class="primary">Got it</button></form>
+</dialog>
 <video id="video" playsinline muted style="display:none"></video>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <script type="module">
@@ -226,9 +255,14 @@ const ball = solid(new THREE.SphereGeometry(20 * S, 32, 16), mat(0xff7a1a, 1, { 
 const ghostBall = solid(new THREE.SphereGeometry(20 * S, 24, 12), mat(0x00e5ff, .35));
 const guide = solid(box(), mat(0x3b6cf6));
 const goal = solid(box(), mat(0x2b8cff, .3));
+goal.add(new THREE.LineSegments(new THREE.EdgesGeometry(box()), new THREE.LineBasicMaterial({ color: 0x9cc2ff })));  // "guide goes here" outline
 const target = new THREE.Mesh(new THREE.RingGeometry(16 * S, 24 * S, 48), new THREE.MeshBasicMaterial({ color: 0x4cb782, side: THREE.DoubleSide }));
 target.rotation.x = -Math.PI / 2; board.add(target);
+const targetGrab = new THREE.Mesh(new THREE.CircleGeometry(36 * S, 24), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
+target.add(targetGrab);  // the ring is thin, so give it a generous invisible handle
 [ball, ghostBall, guide, goal, target].forEach((m) => { m.visible = false; });
+guide.userData = { obj: 'guide', dims: [180, 15, 30], pose: [0, 0, 0] };
+target.userData = { obj: 'target', pose: [0, 0, 0] };
 const obstacles = [], lines = {};
 const lineMats = {  // fat lines: WebGL ignores linewidth on plain lines
   alt: new LineMaterial({ color: 0x5ac8c8, linewidth: 1, transparent: true, opacity: .3, depthWrite: false }),
@@ -250,6 +284,16 @@ function place(mesh, o, len, wid, ht) {
   mesh.visible = !!o; if (!o) return;
   mesh.scale.set(len * S, ht * S, wid * S); mesh.position.copy(P(o[0], o[1], ht / 2)); mesh.rotation.y = -o[2] * Math.PI / 180;
 }
+function show(m) {  // draw a piece at its userData pose
+  const u = m.userData;
+  if (m === target) target.position.copy(P(u.pose[0], u.pose[1], 1)); else place(m, u.pose, ...u.dims);
+  dirty = true;
+}
+function sync(m, pose) {  // the camera's measured pose, unless the user is holding this piece
+  if ((drag && drag.m === m) || performance.now() < (m.userData.hold || 0)) return;
+  m.visible = !!pose;
+  if (pose) { m.userData.pose = pose; show(m); }
+}
 function setLine(key, paths) {
   (lines[key] || []).forEach((l) => { board.remove(l); l.geometry.dispose(); });
   lines[key] = (paths || []).filter((p) => p && p.length > 1).map((p) => {
@@ -263,11 +307,11 @@ function twin(st) {
   const [bw, bh, tilt] = st.board; setBoard(bw, bh, tilt);
   const sc = st.scene, ov = st.overlay || {};
   ball.visible = !!sc.ball; if (sc.ball) ball.position.copy(P(sc.ball.x, sc.ball.y, 20));
-  place(guide, sc.guide && [sc.guide.x, sc.guide.y, sc.guide.angle], 180, 15, 30);
+  sync(guide, sc.guide && [sc.guide.x, sc.guide.y, sc.guide.angle]);
+  sync(target, sc.target && [sc.target.x, sc.target.y, 0]);
   place(goal, ov.goal, 180, 15, 30);
-  target.visible = !!sc.target; if (sc.target) target.position.copy(P(sc.target.x, sc.target.y, 1));
-  while (obstacles.length < sc.obstacles.length) obstacles.push(solid(box(), mat(0xc147b8)));
-  obstacles.forEach((m, i) => { const o = sc.obstacles[i]; place(m, o && [o.x, o.y, o.angle], o ? o.length : 1, o ? o.width : 1, 40); });
+  while (obstacles.length < sc.obstacles.length) { const m = solid(box(), mat(0xc147b8)); m.userData = { obj: 'obstacle', dims: [60, 45, 40], pose: [0, 0, 0] }; obstacles.push(m); }
+  obstacles.forEach((m, i) => { const o = sc.obstacles[i]; if (o) m.userData.dims = [o.length, o.width, 40]; sync(m, o && [o.x, o.y, o.angle]); });
   const key = JSON.stringify([st.plan && st.plan.guide, ov.pred_path && ov.pred_path[ov.pred_path.length - 1], (ov.ghosts || []).length, (ov.observed || []).length]);
   if (key !== lastKey) {  // rebuild path geometry only when the paths actually change
     lastKey = key;
@@ -296,10 +340,106 @@ orbit.addEventListener('change', () => { dirty = true; });
   dirty = false; last = now; renderer.render(scene3, cam3);
 })(0);
 
+// ---------- your hands: drag pieces on the twin; scroll, double-click or Q / E to rotate ----------
+const view3 = canvas.parentElement, ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), surface = new THREE.Plane(), at = new THREE.Vector3();
+let drag = null, hover = null, chosen = null, rolling = false;
+const live = () => mode === 'synthetic' && ws && ws.readyState === 1 && !rolling;
+const keep = (p) => [Math.min(Math.max(p[0], 60), W - 60), Math.min(Math.max(p[1], 90), H - 50), ((p[2] + 90) % 180 + 180) % 180 - 90];  // as api.on_board
+function aim(e) {
+  const r = canvas.getBoundingClientRect();
+  ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(ndc, cam3);
+}
+function pick() {
+  const h = ray.intersectObjects([guide, target, ...obstacles].filter((m) => m.visible), true)[0];
+  return h ? (h.object === targetGrab ? target : h.object) : null;
+}
+function boardPoint() {  // where the pointer ray meets the board surface, in board mm
+  surface.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 1, 0).applyQuaternion(board.quaternion), board.position);
+  if (!ray.ray.intersectPlane(surface, at)) return null;
+  const l = board.worldToLocal(at.clone());
+  return [l.x / S + W / 2, l.z / S + H / 2];
+}
+function glow(m, on) {
+  if (!m) return;
+  if (m === target) m.material.color.setHex(on ? 0x8ff0bd : 0x4cb782); else m.material.emissive.setHex(on ? 0x2a3550 : 0);
+  dirty = true;
+}
+function commit(m, from) {
+  const u = m.userData, [x, y, a] = u.pose.map(Math.round);
+  send({ cmd: 'set', obj: u.obj, x, y, a, fx: Math.round(from[0]), fy: Math.round(from[1]) });
+  u.hold = performance.now() + 1500;
+}
+function rotate(m, d) {
+  const u = m.userData;
+  u.pose = keep([u.pose[0], u.pose[1], u.pose[2] + d]); u.hold = performance.now() + 1500; show(m);
+  clearTimeout(u.timer); u.timer = setTimeout(() => commit(m, u.pose), 350);  // one re-plan per burst of scrolling
+}
+view3.addEventListener('pointerdown', (e) => {  // capture phase: grabbing a piece must not also orbit the view
+  if (!live() || e.button !== 0) return;
+  aim(e);
+  const m = pick(), p = m && boardPoint();
+  if (!p) return;
+  e.stopPropagation(); canvas.setPointerCapture(e.pointerId);
+  drag = { m, off: [p[0] - m.userData.pose[0], p[1] - m.userData.pose[1]], from: m.userData.pose.slice() };
+  chosen = m; view3.classList.add('dragging');
+}, true);
+canvas.addEventListener('pointermove', (e) => {
+  aim(e);
+  if (drag) {
+    const p = boardPoint(), u = drag.m.userData;
+    if (p) { u.pose = keep([p[0] - drag.off[0], p[1] - drag.off[1], u.pose[2]]); show(drag.m); }
+    return;
+  }
+  const m = live() ? pick() : null;
+  if (m !== hover) { glow(hover, false); glow(m, true); hover = m; view3.classList.toggle('over', !!m); }
+});
+function drop() {
+  if (!drag) return;
+  const { m, from } = drag, p = m.userData.pose;
+  drag = null; view3.classList.remove('dragging');
+  if (Math.hypot(p[0] - from[0], p[1] - from[1]) >= 1) commit(m, from);
+}
+canvas.addEventListener('pointerup', drop);
+canvas.addEventListener('pointercancel', drop);
+view3.addEventListener('wheel', (e) => {
+  if (!live()) return;
+  aim(e);
+  const m = pick();
+  if (!m || m === target) return;  // over the background the wheel zooms
+  e.preventDefault(); e.stopPropagation(); rotate(m, e.deltaY > 0 ? -5 : 5);
+}, { capture: true, passive: false });
+view3.addEventListener('dblclick', (e) => { aim(e); const m = live() && pick(); if (m && m !== target) rotate(m, 15); });
+addEventListener('keydown', (e) => {
+  const m = hover || chosen;
+  if (m && m !== target && live() && (e.key === 'q' || e.key === 'e')) rotate(m, e.key === 'q' ? 5 : -5);
+});
+window.screenOf = (what) => {  // client px of a piece ('guide' | 'target' | 'obstacle') or of a board point [x, y] mm: for scripted demos and tests
+  const m = { guide, target, obstacle: obstacles[0] }[what];
+  const v = Array.isArray(what) ? board.localToWorld(P(what[0], what[1], 15)) : m && m.visible && m.getWorldPosition(new THREE.Vector3());
+  if (!v) return null;
+  v.project(cam3);
+  const r = canvas.getBoundingClientRect();
+  return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height];
+};
+
 // ---------- panels ----------
 const PARAMS = { mu_roll: ['Rolling resistance', 0, 0.08], damp: ['Speed damping', 0, 1.5], rest: ['Bounce', 0.05, 0.9], mu_wall: ['Guide friction', 0, 0.6] };  // bounds = physics.BOUNDS
 const STEP = { calibrating: 0, placing: 1, ready: 2, trial: 3, reset: 4, success: 4 };
 const NEXT = { placing: 'place', ready: 'release', reset: 'reset_ball', success: 'new_layout' };
+const HINT = {
+  calibrating: 'Measuring the board…',
+  placing: '<b>Next:</b> move the blue guide onto the blue outline. Drag it in the 3D view (scroll to rotate), or press <b>Place guide</b>.',
+  ready: '<b>Next:</b> the camera verified the placement. Press <b>Release ball</b>.',
+  trial: 'Watching the roll…',
+  reset: '<b>Next:</b> press <b>Reset ball</b> to put the ball back at the gate. The agent then plans again with what it learned.',
+  success: '<b>Hit!</b> For a new challenge, drag the green target or a magenta block somewhere new, or press <b>New layout</b>.',
+};
+const HANDS = {  // when each hands-on button applies: [enabled?, tooltip when on, tooltip when off]
+  place: (s) => [s === 'placing', 'Move the guide to the instructed pose', 'Available while the agent waits for the guide'],
+  release: (s) => [s === 'ready', 'Let the ball go from the gate', 'Available once the camera has verified the guide'],
+  reset_ball: (s) => [s === 'reset' || s === 'success', 'Put the ball back at the gate', 'Available after a roll'],
+  move_obstacle: (s) => [s !== 'calibrating', 'Move a magenta block: the agent must notice and re-plan', 'Available once the board is measured'],
+};
 const CMD = { place: 'placed the guide', release: 'released the ball', reset_ball: 'put the ball back at the gate', move_obstacle: 'moved an obstacle',
   occlude: 'blocked or cleared the camera view', auto: 'toggled auto-follow', new_layout: 'asked for a new layout', restart: 'restarted the session' };
 const changed = (a = {}, b = {}) => Object.keys(b).filter((k) => Math.abs(b[k] - a[k]) > 1e-4)
@@ -319,7 +459,10 @@ function describe(e) {  // -> [colour, title, detail, why]
     case 'new_challenge': return ['var(--accent-hi)', 'New challenge', (e.changes || []).join('; ')];
     case 'clear_view_requested': return ['var(--bad)', 'Camera view blocked', `${e.reason}. Holding the plan`];
     case 'view_restored': return ['var(--ok)', 'View restored', ''];
-    case 'human_command': return ['var(--faint)', `You ${CMD[e.cmd] || e.cmd}`, ''];
+    case 'human_command': {
+      const to = e.to || [];
+      return ['var(--faint)', e.cmd === 'set' ? `You moved the ${e.obj} to (${to[0]}, ${to[1]}) mm${e.obj === 'target' ? '' : ` at ${to[2]}°`}` : `You ${CMD[e.cmd] || e.cmd}`, ''];
+    }
     default: {
       const { t, state, scene_version, event, ...rest } = e;
       return ['var(--muted)', event.replace(/_/g, ' '), Object.entries(rest).map(([k, v]) => `${k} ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(' · ')];
@@ -377,28 +520,59 @@ function panels(st) {
     : '<div class="empty">No trials yet</div>';
   feed(st.events);
 }
+let noteUntil = 0;
+function hint(html, isNote = false) {
+  const h = $('hint');
+  if (!isNote && performance.now() < noteUntil) return;  // let a server note stay readable
+  if (isNote) noteUntil = performance.now() + 4000;
+  h.classList.toggle('note', isNote); if (h.innerHTML !== html) h.innerHTML = html;
+}
+function controls(msg) {  // synthetic mode: which hands make sense right now, and what to do next
+  const s = msg.status.state;
+  rolling = !!msg.rolling;
+  $('auto').classList.toggle('on', msg.auto); $('occ').classList.toggle('on', msg.occluded);
+  cmds.forEach((b) => {
+    const c = b.dataset.cmd, rule = HANDS[c];
+    if (rule) { const [ok, on, off] = rule(s); b.disabled = !ok || rolling || (msg.auto && c !== 'move_obstacle'); b.title = b.disabled ? (rolling ? 'Wait for the ball to stop' : msg.auto ? 'Auto-follow is doing this' : off) : on; }
+    else b.disabled = false;
+    b.classList.toggle('primary', !msg.auto && !b.disabled && c === NEXT[s]);
+  });
+  hint(msg.occluded ? '<b>Camera blocked.</b> The agent holds instead of guessing. Press <b>Block camera</b> again to clear the view.'
+    : msg.auto ? '<b>Auto-follow is on:</b> a scripted human follows every instruction. Press it again to take over.' : HINT[s] || '');
+}
 
 // ---------- transport ----------
-let ws = null, mode = 'synthetic', stream = null;
+let ws = null, mode = 'synthetic', stream = null, retry = 0;
 const proto = location.protocol === 'https:' ? 'wss' : 'ws';
 const cmds = document.querySelectorAll('button[data-cmd]');
+const send = (m) => ws && ws.readyState === 1 && ws.send(JSON.stringify(m));
 function connect(m) {
   if (ws) ws.close();
   mode = m; $('btnSyn').classList.toggle('on', m === 'synthetic'); $('btnCam').classList.toggle('on', m === 'camera');
-  cmds.forEach((b) => { b.hidden = m === 'camera' && b.dataset.cmd !== 'restart'; b.classList.remove('primary'); });
+  cmds.forEach((b) => { b.hidden = m === 'camera' && b.dataset.cmd !== 'restart'; b.disabled = true; b.classList.remove('primary'); });
   $('controls').classList.toggle('cam', m === 'camera');
-  ws = new WebSocket(`${proto}://${location.host}/ws?mode=${m}`);
-  ws.onopen = () => { $('conn').textContent = 'connected'; if (m === 'camera') sendFrame(); };
-  ws.onclose = (e) => { $('conn').textContent = e.reason || 'disconnected'; $('conn').classList.remove('live'); };
-  ws.onmessage = (ev) => {
+  $('tip').textContent = m === 'camera' ? 'Mirrors what your camera measures' : 'Drag pieces to move · scroll to rotate · drag background to orbit';
+  const sock = ws = new WebSocket(`${proto}://${location.host}/ws?mode=${m}`);
+  sock.onopen = () => { $('conn').textContent = 'connected'; if (m === 'camera') sendFrame(); };
+  sock.onclose = (e) => {
+    if (ws !== sock) return;  // replaced on purpose by a newer connection
+    $('conn').classList.remove('live'); cmds.forEach((b) => { b.disabled = true; });
+    $('conn').textContent = e.reason === 'server busy' ? 'server busy, retrying' : 'reconnecting';
+    hint('Lost the connection to the server. Reconnecting…');
+    setTimeout(() => { if (ws === sock) connect(mode); }, Math.min(10000, 1000 * 2 ** retry++));
+  };
+  sock.onmessage = (ev) => {
     const msg = JSON.parse(ev.data);
-    if (msg.type === 'hello') { $('conn').textContent = msg.session; $('conn').classList.add('live'); return; }
-    if (msg.type === 'note') { $('note').textContent = msg.text; return; }
+    if (msg.type === 'hello') { retry = 0; $('conn').textContent = msg.session; $('conn').classList.add('live'); return; }
+    if (msg.type === 'note') { hint(esc(msg.text), true); return; }
     $('cam').src = msg.img; panels(msg.status); twin(msg.status);
-    if (mode === 'synthetic') {
-      $('auto').classList.toggle('on', msg.auto); $('occ').classList.toggle('on', msg.occluded); $('note').textContent = '';
-      cmds.forEach((b) => b.classList.toggle('primary', !msg.auto && b.dataset.cmd === NEXT[msg.status.state]));
-    } else sendFrame();
+    if (mode === 'synthetic') controls(msg);
+    else {
+      cmds.forEach((b) => { if (b.dataset.cmd === 'restart') b.disabled = false; });
+      hint(msg.status.blocked ? `<b>Show the whole board.</b> The camera needs all four corner markers (<a href="/markers.png" download>marker sheet</a>). Move the real pieces by hand.`
+        : 'Camera mode: follow the instruction on the right and move the real pieces by hand.');
+      sendFrame();
+    }
   };
 }
 const grab = document.createElement('canvas'); grab.width = 960; grab.height = 720;
@@ -407,14 +581,21 @@ function sendFrame() {
   grab.getContext('2d').drawImage(v, 0, 0, 960, 720);
   grab.toBlob(async (b) => { if (ws.readyState === 1) ws.send(new Blob([new Float64Array([performance.now() / 1000]), await b.arrayBuffer()])); }, 'image/jpeg', 0.8);
 }
+function camHelp(title, why) { $('camTitle').textContent = title; $('camWhy').textContent = why; $('camHelp').showModal(); }
 $('btnSyn').onclick = () => connect('synthetic');
 $('btnCam').onclick = async () => {
+  if (!window.isSecureContext || !navigator.mediaDevices) {
+    return camHelp('Camera mode needs HTTPS', 'Browsers only let a web page use your camera over HTTPS or on localhost. This demo server runs plain HTTP '
+      + 'until AWS verifies the account for CloudFront, so the camera is blocked on this address. To use a real camera and board:');
+  }
   try {
     stream = stream || await navigator.mediaDevices.getUserMedia({ video: { width: 960, height: 720, facingMode: 'environment' } });
     $('video').srcObject = stream; await $('video').play(); connect('camera');
-  } catch (e) { $('instruction').textContent = 'Camera unavailable: ' + e.message + ' (needs HTTPS or localhost).'; }
+  } catch (e) {
+    camHelp('Camera unavailable', `${e.message || e.name}. Allow camera access for this page and close other apps that use the camera. You also need the printed board:`);
+  }
 };
-cmds.forEach((b) => { b.onclick = () => ws && ws.readyState === 1 && ws.send(JSON.stringify({ cmd: b.dataset.cmd })); });
+cmds.forEach((b) => { b.onclick = () => send({ cmd: b.dataset.cmd }); });
 connect('synthetic');
 </script>
 </body>

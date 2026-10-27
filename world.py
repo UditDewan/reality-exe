@@ -145,7 +145,7 @@ class World:
                 "obstacles": [(o.x, o.y, o.angle) for o in self.obstacles], "t": self.t}
 
 
-def print_markers(path, cfg=None):
+def marker_sheet(cfg=None):
     """A4-printable sheet of the five markers at 40 mm (300 dpi)."""
     cfg = cfg or Config()
     px = int(cfg.marker_mm / 25.4 * 300)
@@ -154,11 +154,11 @@ def print_markers(path, cfg=None):
         x, y = 300 + (k % 2) * 1100, 300 + (k // 2) * 1000
         sheet[y:y + px, x:x + px] = cv.aruco.generateImageMarker(DICT, i, px)
         cv.putText(sheet, f"id {i}" + (" TARGET" if i == cfg.target_id else ""), (x, y + px + 80), cv.FONT_HERSHEY_SIMPLEX, 2, 0, 4)
-    cv.imwrite(path, sheet)
+    return sheet
 
 
 if __name__ == "__main__":
     if len(sys.argv) == 3 and sys.argv[1] == "--print-markers":
-        print_markers(sys.argv[2])
+        cv.imwrite(sys.argv[2], marker_sheet())
     else:
         cv.imwrite("frame.png", World().render())

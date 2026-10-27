@@ -10,7 +10,8 @@ plan before you act on it.
 The camera is the experimental scientist; you are its hands.
 
 - **Live demo on AWS: http://ec2-98-93-53-0.compute-1.amazonaws.com**. It opens on the synthetic tabletop, so no hardware is needed. Press *Auto-follow
-  instructions* to watch the whole loop, or drive it yourself with *Place guide* → *Release ball*.
+  instructions* to watch the whole loop, or drive it yourself with *Place guide* → *Release ball*, or drag the
+  guide, target and blocks in the 3D view (scroll over a piece to rotate it).
   *Move obstacle* and *Block camera* show the human-control cases. It is plain HTTP until AWS enables
   CloudFront for this new account, so *Use my camera* (which needs HTTPS) works only on a local run for now.
 - Technical report: [REPORT.md](REPORT.md)
@@ -54,7 +55,8 @@ python -m venv .venv
 Open <http://localhost:8000>. The **Synthetic tabletop** (default) needs no hardware: the server renders
 camera frames of a board whose ball physics come from Newton with hidden parameters, and the agent only
 sees those frames. Press **Auto-follow instructions** to watch the loop run itself, or use the buttons as
-your hands: *Place guide*, *Release ball*, *Move obstacle*, *Block camera*.
+your hands: *Place guide*, *Release ball*, *Move obstacle*, *Block camera*. You can also drag the guide, the target
+and the blocks in the 3D view (scroll or double-click a piece to rotate it); the camera re-measures whatever you do.
 
 **Use my camera** streams your webcam to the same agent (browsers allow camera access on `localhost` or HTTPS).
 
@@ -63,7 +65,7 @@ your hands: *Place guide*, *Release ball*, *Move obstacle*, *Block camera*.
 | Item | Default (edit via a JSON file pointed to by `REALITY_CONFIG`, keys as in `scene.Config`) |
 |---|---|
 | Board | white foam board, 600 × 450 mm, tilted **8°** (measure with a phone inclinometer), rims on 3 sides, open bottom edge |
-| Markers | print `python world.py --print-markers markers.png` at 100% scale: ids 0–3 at the corner centres (30, 30), (570, 30), (570, 420), (30, 420) mm, upright; id 4 is the **target**, place it anywhere |
+| Markers | print `python world.py --print-markers markers.png` (or download `/markers.png` from the running app) at 100% scale: ids 0–3 at the corner centres (30, 30), (570, 30), (570, 420), (30, 420) mm, upright; id 4 is the **target**, place it anywhere |
 | Ball | 40 mm orange ping-pong ball, released from a fixed gate at (300, 45) mm |
 | Guide | 180 × 15 mm blue stick |
 | Obstacles | magenta blocks (≈60 × 45 mm) |
@@ -123,7 +125,8 @@ Without AWS: `docker build -t reality-exe . && docker run -p 8000:8000 reality-e
 | `POST /api/observe` (multipart `image`) | stateless OpenCV check: board registration + measured ball/guide/obstacles/target in mm |
 | `POST /api/plan` (JSON `{target, obstacles, guide?, params?}`) | stateless planning job, returns guide pose, predicted paths, instruction |
 | `GET /api/sessions/{id}/trace` | full decision trace of a session |
-| `WS /ws?mode=synthetic\|camera` | live loop: client sends frames (`float64 timestamp + JPEG`) or commands, server streams annotated frame + status |
+| `GET /markers.png` | printable ArUco marker sheet (A4, print at 100%) |
+| `WS /ws?mode=synthetic\|camera` | live loop: client sends frames (`float64 timestamp + JPEG`) or commands, server streams annotated frame + status. Synthetic commands include `{"cmd": "set", "obj": "guide"\|"target"\|"obstacle", "x", "y", "a", "fx", "fy"}` (a dragged piece, mm and degrees) |
 
 ## Code map
 
